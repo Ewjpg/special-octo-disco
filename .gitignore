@@ -1,3 +1,5 @@
 book/model.json
 *.fragment.html
 __pycache__/
+roblox-game/build/stadium/serve/
+roblox-game/build/stadium/textures/_sheet.png

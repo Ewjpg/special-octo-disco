@@ -122,13 +122,13 @@ local function buildPitch(root: Instance)
 	local stripeWidth = F.Length / stripes
 	for i = 0, stripes - 1 do
 		local x = -HL + stripeWidth * (i + 0.5)
-		local color = i % 2 == 0 and Color3.fromRGB(58, 132, 48) or Color3.fromRGB(53, 123, 44)
+		local color = i % 2 == 0 and Color3.fromRGB(76, 116, 64) or Color3.fromRGB(70, 108, 59)
 		local stripe = newPart(pitch, "Grass", Vector3.new(stripeWidth, 1, F.Width), at(x, -0.5, 0), color, Enum.Material.Grass)
 		stripe.CastShadow = false
 	end
 
 	-- Газон за линиями до бортов.
-	local apronColor = Color3.fromRGB(50, 116, 42)
+	local apronColor = Color3.fromRGB(64, 98, 56)
 	for _, s in ipairs({ -1, 1 }) do
 		local endApron = newPart(
 			pitch,
@@ -293,8 +293,8 @@ local function buildWalls(root: Instance)
 			"BoardFace",
 			Vector3.new(length - 0.6, boardH - 1.4, 0.2),
 			faceCf,
-			color:Lerp(Color3.new(0, 0, 0), 0.25),
-			Enum.Material.Neon
+			color:Lerp(Color3.fromRGB(40, 44, 56), 0.4),
+			Enum.Material.SmoothPlastic
 		)
 		decor(face)
 	end
@@ -678,7 +678,7 @@ end
 local function setupLighting()
 	Lighting.ClockTime = 14.4
 	Lighting.GeographicLatitude = 32
-	Lighting.Brightness = 2.6
+	Lighting.Brightness = 2.3
 	Lighting.Ambient = Color3.fromRGB(128, 136, 162)
 	Lighting.OutdoorAmbient = Color3.fromRGB(166, 178, 208)
 	Lighting.ColorShift_Top = Color3.fromRGB(236, 243, 255)
@@ -701,16 +701,16 @@ local function setupLighting()
 	sky.Parent = Lighting
 
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.3
-	atmosphere.Offset = 0.1
-	atmosphere.Color = Color3.fromRGB(190, 214, 255)
-	atmosphere.Decay = Color3.fromRGB(92, 132, 212)
+	atmosphere.Density = 0.18
+	atmosphere.Offset = 0.05
+	atmosphere.Color = Color3.fromRGB(184, 196, 214)
+	atmosphere.Decay = Color3.fromRGB(104, 118, 146)
 	atmosphere.Glare = 0.2
-	atmosphere.Haze = 1.4
+	atmosphere.Haze = 0.6
 	atmosphere.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.35
+	bloom.Intensity = 0.25
 	bloom.Size = 24
 	bloom.Threshold = 1.7
 	bloom.Parent = Lighting
@@ -722,9 +722,9 @@ local function setupLighting()
 
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Brightness = 0.03
-	grade.Contrast = 0.06
-	grade.Saturation = 0.18
-	grade.TintColor = Color3.fromRGB(242, 246, 255)
+	grade.Contrast = 0.14
+	grade.Saturation = -0.06
+	grade.TintColor = Color3.fromRGB(240, 242, 248)
 	grade.Parent = Lighting
 
 	-- Облака живут в Terrain.
@@ -776,9 +776,13 @@ function FieldBuilder.build()
 	buildGoal(root, -1)
 	buildGoal(root, 1)
 	buildWalls(root)
-	buildStands(root)
-	buildScoreboard(root, -1)
-	buildScoreboard(root, 1)
+	-- A stadium mesh made in Blender (tools/stadium), imported into Workspace as StadiumMesh,
+	-- replaces the part-built stands and their hanging screens.
+	if not Workspace:FindFirstChild("StadiumMesh") then
+		buildStands(root)
+		buildScoreboard(root, -1)
+		buildScoreboard(root, 1)
+	end
 	buildSpawns(root)
 	setupLighting()
 
