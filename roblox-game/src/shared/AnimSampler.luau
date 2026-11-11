@@ -91,7 +91,11 @@ local CURVE = {
 	end,
 }
 
+-- { x, y, z, qx, qy, qz, qw } (Blender clips) or { x, y, z, r00..r22 }.
 local function toTransform(v: { number }): CFrame
+	if #v == 7 then
+		return CFrame.new(v[1], v[2], v[3], v[4], v[5], v[6], v[7])
+	end
 	return CFrame.new(v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12])
 end
 
