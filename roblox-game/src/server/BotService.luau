@@ -50,7 +50,7 @@ local function createRig(teamKey: string): Model?
 		return Players:CreateHumanoidModelFromDescription(description, RIG_TYPE)
 	end)
 	if not ok or typeof(result) ~= "Instance" then
-		warn("[Bots] не удалось создать вратаря: " .. tostring(result))
+		warn("[Bots] could not create a goalkeeper: " .. tostring(result))
 		return nil
 	end
 	return result :: Model
@@ -74,7 +74,7 @@ local function spawnKeeper(teamKey: string)
 	end
 
 	local team = Config.Teams[teamKey]
-	model.Name = "Вратарь " .. team.Name
+	model.Name = team.Name .. " Goalkeeper"
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.AutoRotate = false
 	local animate = model:FindFirstChild("Animate")
@@ -100,7 +100,7 @@ local function spawnKeeper(teamKey: string)
 	actor.baseSpeed = BOTS.KeeperSpeed
 	actor.trapRadius = BOTS.KeeperReach
 	actor.trapMaxSpeed = BOTS.KeeperCatchSpeed
-	PlayerService.addKit(actor, "ВРАТАРЬ")
+	PlayerService.addKit(actor, "GOALKEEPER")
 
 	local animator = humanoid:FindFirstChildOfClass("Animator") :: Animator?
 	if not animator then

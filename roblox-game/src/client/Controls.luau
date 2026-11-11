@@ -165,7 +165,7 @@ local function doTackle()
 		return
 	end
 	if State.stamina() < TACKLE.Stamina then
-		deny("Action", "НЕТ СИЛ")
+		deny("Action", "NO STAMINA")
 		return
 	end
 	local root = State.root()
@@ -189,7 +189,7 @@ local function doDribble()
 		return
 	end
 	if State.stamina() < DRIBBLE.Stamina then
-		deny("Action", "НЕТ СИЛ")
+		deny("Action", "NO STAMINA")
 		return
 	end
 	local root = State.root()
@@ -221,7 +221,7 @@ local function doDash()
 		return
 	end
 	if State.stamina() < DASH.Stamina then
-		deny("Dash", "НЕТ СИЛ")
+		deny("Dash", "NO STAMINA")
 		return
 	end
 	local root = State.root()
@@ -278,15 +278,15 @@ local function doAbility(slot: number)
 	end
 	local hasBall = State.hasBall()
 	if ability.needsBall and not hasBall then
-		deny(key, "НУЖЕН МЯЧ")
+		deny(key, "NEED THE BALL")
 		return
 	end
 	if ability.needsNoBall and hasBall then
-		deny(key, "ТОЛЬКО БЕЗ МЯЧА")
+		deny(key, "ONLY WITHOUT THE BALL")
 		return
 	end
 	if ability.ultimate and State.resonance() < Config.Resonance.Max then
-		deny(key, "РЕЗОНАНС НЕ НАКОПЛЕН")
+		deny(key, "RESONANCE NOT FULL")
 		return
 	end
 
@@ -427,15 +427,15 @@ local function toInputs(names: { string })
 end
 
 local TOUCH_LAYOUT = {
-	RS_Shoot = { "УДАР", UDim2.fromScale(0.52, 0.5) },
-	RS_Pass = { "ПАС", UDim2.fromScale(0.26, 0.62) },
-	RS_Lob = { "НАВЕС", UDim2.fromScale(0.26, 0.36) },
-	RS_Action = { "ОТБОР/ФИНТ", UDim2.fromScale(0.52, 0.24) },
-	RS_Dash = { "РЫВОК", UDim2.fromScale(0.78, 0.24) },
-	RS_Sprint = { "БЕГ", UDim2.fromScale(0.02, 0.5) },
+	RS_Shoot = { "SHOOT", UDim2.fromScale(0.52, 0.5) },
+	RS_Pass = { "PASS", UDim2.fromScale(0.26, 0.62) },
+	RS_Lob = { "LOB", UDim2.fromScale(0.26, 0.36) },
+	RS_Action = { "TACKLE/DRIBBLE", UDim2.fromScale(0.52, 0.24) },
+	RS_Dash = { "DASH", UDim2.fromScale(0.78, 0.24) },
+	RS_Sprint = { "SPRINT", UDim2.fromScale(0.02, 0.5) },
 	RS_Ability1 = { "I", UDim2.fromScale(0.02, 0.1) },
 	RS_Ability2 = { "II", UDim2.fromScale(0.26, 0.1) },
-	RS_Ability3 = { "УЛЬТА", UDim2.fromScale(0.52, 0.0) },
+	RS_Ability3 = { "ULT", UDim2.fromScale(0.52, 0.0) },
 }
 
 local function bind(name: string, inputNames: { string }, handler)

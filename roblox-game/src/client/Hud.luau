@@ -93,11 +93,11 @@ local function setText(label: TextLabel, value: string)
 end
 
 local KEY_NAMES = {
-	MouseButton1 = "ЛКМ",
-	MouseButton2 = "ПКМ",
+	MouseButton1 = "LMB",
+	MouseButton2 = "RMB",
 	LeftShift = "Shift",
 	LeftControl = "Ctrl",
-	Space = "Пробел",
+	Space = "Space",
 }
 
 local function keyName(names: { string }): string
@@ -290,11 +290,11 @@ local function buildBars()
 		BackgroundTransparency = 1,
 	}, root)
 
-	chargeHolder, chargeFill = bar(cluster, 0, 12, "УДАР", GOLD)
+	chargeHolder, chargeFill = bar(cluster, 0, 12, "SHOT", GOLD)
 	chargeHolder.Visible = false
-	local _, stamina = bar(cluster, 26, 10, "СИЛЫ", WHITE)
+	local _, stamina = bar(cluster, 26, 10, "STAMINA", WHITE)
 	staminaFill = stamina
-	local resonanceHolder, resonance = bar(cluster, 48, 12, "РЕЗОНАНС", WHITE)
+	local resonanceHolder, resonance = bar(cluster, 48, 12, "RESONANCE", WHITE)
 	resonanceFill = resonance
 	resonanceGlow = border(resonanceHolder, WHITE, 2, 1)
 	resonanceHolder.Visible = STYLES_ON
@@ -303,7 +303,7 @@ local function buildBars()
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UserInputService.TouchEnabled and UDim2.new(0.5, 0, 1, -104) or UDim2.new(0.5, 0, 1, -184 + BARS_SHIFT),
 		Size = UDim2.fromOffset(300, 22),
-		Text = "МЯЧ У ТЕБЯ",
+		Text = "YOU HAVE THE BALL",
 		TextColor3 = GOLD,
 		TextSize = 15,
 		TextStrokeTransparency = 0.4,
@@ -420,9 +420,9 @@ local function buildSlots()
 		slots[key] = { frame = frame, stroke = stroke, name = nameLabel, overlay = overlay, time = timeLabel, total = 1 }
 	end
 
-	slots.Dash.name.Text = "РЫВОК"
+	slots.Dash.name.Text = "DASH"
 	slots.Dash.total = Config.Dash.Cooldown
-	slots.Action.name.Text = "ПОДКАТ"
+	slots.Action.name.Text = "TACKLE"
 	slots.Action.total = Config.Tackle.Cooldown
 end
 
@@ -468,7 +468,7 @@ local function updateSlots(hasBall: boolean, resonance: number)
 			-- Слот показывает то действие, которое сейчас сработает по этой клавише.
 			cooldownKey = hasBall and "Dribble" or "Tackle"
 			slot.total = hasBall and Config.Dribble.Cooldown or Config.Tackle.Cooldown
-			setText(slot.name, hasBall and "ДРИБЛИНГ" or "ПОДКАТ")
+			setText(slot.name, hasBall and "DRIBBLE" or "TACKLE")
 		end
 		local remaining = State.cooldown(cooldownKey)
 		local fraction = math.clamp(remaining / math.max(slot.total, 0.01), 0, 1)
@@ -516,20 +516,20 @@ local helpPanel: Frame, helpChip: TextLabel
 local function buildHelp()
 	local c = Config.Controls
 	local lines = {
-		{ "WASD / Пробел", "движение, прыжок" },
-		{ keyName(c.Sprint), "бег (тратит силы)" },
-		{ keyName(c.Shoot) .. " (держать)", "удар: дольше — сильнее" },
-		{ keyName(c.Action), "подкат, а с мячом — дриблинг" },
-		{ keyName(c.Pass), "пас партнёру" },
-		{ keyName(c.Lob), "навес" },
-		{ keyName(c.Dash), "рывок" },
+		{ "WASD / Space", "move, jump" },
+		{ keyName(c.Sprint), "sprint (uses stamina)" },
+		{ keyName(c.Shoot) .. " (hold)", "shoot: hold longer, kick harder" },
+		{ keyName(c.Action), "tackle; with the ball: dribble" },
+		{ keyName(c.Pass), "pass to a teammate" },
+		{ keyName(c.Lob), "lob" },
+		{ keyName(c.Dash), "dash" },
 	}
 	if STYLES_ON then
-		table.insert(lines, { keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "способности стиля" })
-		table.insert(lines, { keyName(c.Ability3), "ульта (полный Резонанс)" })
-		table.insert(lines, { keyName(c.StyleMenu), "сменить стиль" })
+		table.insert(lines, { keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "style abilities" })
+		table.insert(lines, { keyName(c.Ability3), "ultimate (full Resonance)" })
+		table.insert(lines, { keyName(c.StyleMenu), "change style" })
 	end
-	table.insert(lines, { c.ShiftLock == "LeftControl" and "Ctrl" or c.ShiftLock, "закрепить камеру" })
+	table.insert(lines, { c.ShiftLock == "LeftControl" and "Ctrl" or c.ShiftLock, "lock camera" })
 
 	helpPanel = make("Frame", {
 		Name = "Help",
@@ -545,7 +545,7 @@ local function buildHelp()
 	text({
 		Position = UDim2.fromOffset(14, 10),
 		Size = UDim2.new(1, -28, 0, 18),
-		Text = "УПРАВЛЕНИЕ   [" .. keyName(c.Help) .. " — скрыть]",
+		Text = "CONTROLS   [" .. keyName(c.Help) .. " to hide]",
 		TextColor3 = GOLD,
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -576,7 +576,7 @@ local function buildHelp()
 		Size = UDim2.fromOffset(190, 26),
 		BackgroundColor3 = PANEL,
 		BackgroundTransparency = 0.25,
-		Text = keyName(c.Help) .. " — управление",
+		Text = keyName(c.Help) .. ": controls",
 		TextColor3 = MUTED,
 		TextSize = 12,
 		Visible = false,
@@ -605,7 +605,7 @@ local function setMenu(open: boolean)
 			local selected = id == current
 			card.stroke.Transparency = selected and 0 or 0.7
 			card.stroke.Thickness = selected and 3 or 1
-			card.button.Text = selected and "ВЫБРАН" or "ВЫБРАТЬ"
+			card.button.Text = selected and "SELECTED" or "SELECT"
 		end
 	end
 end
@@ -658,7 +658,7 @@ local function buildStyleCard(style, parent: Instance, order: number)
 		Position = UDim2.fromOffset(14, 66),
 		Size = UDim2.new(1, -28, 0, 30),
 		Font = Enum.Font.GothamMedium,
-		Text = "«" .. (style.tagline or "") .. "»",
+		Text = '"' .. (style.tagline or "") .. '"',
 		TextSize = 12,
 		TextWrapped = true,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -714,7 +714,7 @@ local function buildStyleCard(style, parent: Instance, order: number)
 		BackgroundColor3 = style.color,
 		BorderSizePixel = 0,
 		Font = Enum.Font.GothamBlack,
-		Text = "ВЫБРАТЬ",
+		Text = "SELECT",
 		TextColor3 = Color3.fromRGB(14, 16, 24),
 		TextSize = 14,
 		AutoButtonColor = true,
@@ -736,7 +736,7 @@ local function buildStyleMenu()
 		BackgroundTransparency = 0.15,
 		BorderSizePixel = 0,
 		Font = Enum.Font.GothamBold,
-		Text = "СТИЛЬ",
+		Text = "STYLE",
 		TextColor3 = WHITE,
 		TextSize = 13,
 	}, root)
@@ -774,7 +774,7 @@ local function buildStyleMenu()
 		Position = UDim2.fromOffset(24, 16),
 		Size = UDim2.new(1, -100, 0, 30),
 		Font = Enum.Font.GothamBlack,
-		Text = "ВЫБЕРИ СТИЛЬ",
+		Text = "CHOOSE YOUR STYLE",
 		TextSize = 24,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 10,
@@ -835,11 +835,11 @@ end
 ---------------------------------------------------------------------------
 
 local PHASE_TEXT = {
-	Waiting = "ОЖИДАНИЕ ИГРОКОВ",
-	Kickoff = "РОЗЫГРЫШ",
+	Waiting = "WAITING FOR PLAYERS",
+	Kickoff = "KICKOFF",
 	Playing = "",
-	Goal = "ГОЛ",
-	FullTime = "МАТЧ ОКОНЧЕН — СКОРО НОВЫЙ",
+	Goal = "GOAL",
+	FullTime = "FULL TIME: NEXT MATCH SOON",
 }
 
 local function updateScale()
@@ -868,7 +868,7 @@ local function onRender()
 
 	if STYLES_ON then
 		local style = State.style()
-		setText(styleButton, string.format("СТИЛЬ: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
+		setText(styleButton, string.format("STYLE: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
 	end
 
 	-- Силы.
@@ -898,12 +898,12 @@ end
 local function hookEvents()
 	FxEvents.on("Countdown", function(data)
 		local team = Config.Teams[data.team]
-		local subtitle = team and ("Разыгрывает " .. team.Name) or ""
+		local subtitle = team and (team.Name .. " KICKS OFF") or ""
 		Hud.banner(tostring(data.n), subtitle, WHITE, 0.8)
 	end)
 
 	FxEvents.on("Whistle", function()
-		Hud.banner("ИГРА!", "", GOLD, 0.9)
+		Hud.banner("PLAY!", "", GOLD, 0.9)
 	end)
 
 	FxEvents.on("Goal", function(data)
@@ -916,18 +916,18 @@ local function hookEvents()
 				subtitle ..= "  ·  " .. style.name
 			end
 			if data.assistName and data.assistName ~= "" then
-				subtitle ..= "   (пас: " .. data.assistName .. ")"
+				subtitle ..= "   (assist: " .. data.assistName .. ")"
 			end
 		end
-		Hud.banner("ГОЛ!", subtitle, team and team.Color or WHITE, 3.2)
+		Hud.banner("GOAL!", subtitle, team and team.Color or WHITE, 3.2)
 	end)
 
 	FxEvents.on("FullTime", function(data)
-		local title = "НИЧЬЯ"
+		local title = "DRAW"
 		local color = WHITE
 		local winner = Config.Teams[data.winner]
 		if winner then
-			title = "ПОБЕДА: " .. winner.Name
+			title = winner.Name .. " WINS"
 			color = winner.Color
 		end
 		Hud.banner(title, string.format("%d : %d", data.home or 0, data.away or 0), color, 6)

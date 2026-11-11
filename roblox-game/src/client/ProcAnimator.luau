@@ -104,7 +104,7 @@ local function assetTrack(rig, character: Model, name: string): AnimationTrack?
 			track = result
 			track.Priority = Enum.AnimationPriority.Action
 		else
-			warn(string.format("[Анимации] не удалось загрузить %s (%s): %s", name, id, tostring(result)))
+			warn(string.format("[Animations] could not load %s (%s): %s", name, id, tostring(result)))
 		end
 	end
 	rig.assets[name] = track or false

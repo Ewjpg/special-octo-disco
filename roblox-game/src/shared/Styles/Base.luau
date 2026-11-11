@@ -3,7 +3,7 @@
 return {
 	id = "Base",
 	selectable = false,
-	name = "Игрок",
+	name = "Player",
 	role = "",
 	color = Color3.fromRGB(255, 255, 255),
 	color2 = Color3.fromRGB(220, 224, 232),

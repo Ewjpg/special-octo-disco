@@ -51,4 +51,4 @@ RunService.Heartbeat:Connect(function(dt)
 	guarded("Actions", Actions.step)
 end)
 
-print(string.format("[%s] сервер запущен, RemoteEvents: %s", "Resonance", Net.Action:GetFullName()))
+print(string.format("[%s] server started, RemoteEvents: %s", "Resonance", Net.Action:GetFullName()))

@@ -110,12 +110,7 @@ local function replaceRig(player: Player, character: Model, humanoid: Humanoid):
 		return Players:CreateHumanoidModelFromDescription(description or Instance.new("HumanoidDescription"), WANTED_RIG)
 	end)
 	if not ok or typeof(result) ~= "Instance" then
-		warn(
-			"[Players] не удалось пересобрать персонажа в "
-				.. Config.Avatar.RigType
-				.. ": "
-				.. tostring(result)
-		)
+		warn("[Players] could not rebuild the character as " .. Config.Avatar.RigType .. ": " .. tostring(result))
 		return false
 	end
 	-- Создание модели занимает время: за это время игрок мог выйти или его персонаж мог смениться.
@@ -163,11 +158,7 @@ local function onCharacter(player: Player, character: Model)
 				return
 			end
 		elseif data.rebuilds == 5 then
-			warn(
-				"[Players] пересборка персонажа отключена для "
-					.. player.Name
-					.. ": слишком частые повторы"
-			)
+			warn("[Players] character rebuild disabled for " .. player.Name .. ": too many retries")
 		end
 	end
 

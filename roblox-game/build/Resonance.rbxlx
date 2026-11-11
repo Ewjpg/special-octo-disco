@@ -1393,7 +1393,7 @@ return Styles
 return {
 	id = "Base",
 	selectable = false,
-	name = "Игрок",
+	name = "Player",
 	role = "",
 	color = Color3.fromRGB(255, 255, 255),
 	color2 = Color3.fromRGB(220, 224, 232),
@@ -1411,8 +1411,8 @@ return {
 return {
 	id = "Keeper",
 	selectable = false,
-	name = "Вратарь",
-	role = "Бот",
+	name = "Goalkeeper",
+	role = "Bot",
 	color = Color3.fromRGB(240, 226, 90),
 	color2 = Color3.fromRGB(255, 255, 255),
 	stats = {},
@@ -3056,7 +3056,7 @@ local function createRig(teamKey: string): Model?
 		return Players:CreateHumanoidModelFromDescription(description, RIG_TYPE)
 	end)
 	if not ok or typeof(result) ~= "Instance" then
-		warn("[Bots] не удалось создать вратаря: " .. tostring(result))
+		warn("[Bots] could not create a goalkeeper: " .. tostring(result))
 		return nil
 	end
 	return result :: Model
@@ -3080,7 +3080,7 @@ local function spawnKeeper(teamKey: string)
 	end
 
 	local team = Config.Teams[teamKey]
-	model.Name = "Вратарь " .. team.Name
+	model.Name = team.Name .. " Goalkeeper"
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.AutoRotate = false
 	local animate = model:FindFirstChild("Animate")
@@ -3106,7 +3106,7 @@ local function spawnKeeper(teamKey: string)
 	actor.baseSpeed = BOTS.KeeperSpeed
 	actor.trapRadius = BOTS.KeeperReach
 	actor.trapMaxSpeed = BOTS.KeeperCatchSpeed
-	PlayerService.addKit(actor, "ВРАТАРЬ")
+	PlayerService.addKit(actor, "GOALKEEPER")
 
 	local animator = humanoid:FindFirstChildOfClass("Animator") :: Animator?
 	if not animator then
@@ -4173,7 +4173,7 @@ RunService.Heartbeat:Connect(function(dt)
 	guarded("Actions", Actions.step)
 end)
 
-print(string.format("[%s] сервер запущен, RemoteEvents: %s", "Resonance", Net.Action:GetFullName()))
+print(string.format("[%s] server started, RemoteEvents: %s", "Resonance", Net.Action:GetFullName()))
 ]]></string>
         </Properties>
       </Item>
@@ -4652,12 +4652,7 @@ local function replaceRig(player: Player, character: Model, humanoid: Humanoid):
 		return Players:CreateHumanoidModelFromDescription(description or Instance.new("HumanoidDescription"), WANTED_RIG)
 	end)
 	if not ok or typeof(result) ~= "Instance" then
-		warn(
-			"[Players] не удалось пересобрать персонажа в "
-				.. Config.Avatar.RigType
-				.. ": "
-				.. tostring(result)
-		)
+		warn("[Players] could not rebuild the character as " .. Config.Avatar.RigType .. ": " .. tostring(result))
 		return false
 	end
 	-- Создание модели занимает время: за это время игрок мог выйти или его персонаж мог смениться.
@@ -4705,11 +4700,7 @@ local function onCharacter(player: Player, character: Model)
 				return
 			end
 		elseif data.rebuilds == 5 then
-			warn(
-				"[Players] пересборка персонажа отключена для "
-					.. player.Name
-					.. ": слишком частые повторы"
-			)
+			warn("[Players] character rebuild disabled for " .. player.Name .. ": too many retries")
 		end
 	end
 
@@ -5225,7 +5216,7 @@ local function doTackle()
 		return
 	end
 	if State.stamina() < TACKLE.Stamina then
-		deny("Action", "НЕТ СИЛ")
+		deny("Action", "NO STAMINA")
 		return
 	end
 	local root = State.root()
@@ -5249,7 +5240,7 @@ local function doDribble()
 		return
 	end
 	if State.stamina() < DRIBBLE.Stamina then
-		deny("Action", "НЕТ СИЛ")
+		deny("Action", "NO STAMINA")
 		return
 	end
 	local root = State.root()
@@ -5281,7 +5272,7 @@ local function doDash()
 		return
 	end
 	if State.stamina() < DASH.Stamina then
-		deny("Dash", "НЕТ СИЛ")
+		deny("Dash", "NO STAMINA")
 		return
 	end
 	local root = State.root()
@@ -5338,15 +5329,15 @@ local function doAbility(slot: number)
 	end
 	local hasBall = State.hasBall()
 	if ability.needsBall and not hasBall then
-		deny(key, "НУЖЕН МЯЧ")
+		deny(key, "NEED THE BALL")
 		return
 	end
 	if ability.needsNoBall and hasBall then
-		deny(key, "ТОЛЬКО БЕЗ МЯЧА")
+		deny(key, "ONLY WITHOUT THE BALL")
 		return
 	end
 	if ability.ultimate and State.resonance() < Config.Resonance.Max then
-		deny(key, "РЕЗОНАНС НЕ НАКОПЛЕН")
+		deny(key, "RESONANCE NOT FULL")
 		return
 	end
 
@@ -5487,15 +5478,15 @@ local function toInputs(names: { string })
 end
 
 local TOUCH_LAYOUT = {
-	RS_Shoot = { "УДАР", UDim2.fromScale(0.52, 0.5) },
-	RS_Pass = { "ПАС", UDim2.fromScale(0.26, 0.62) },
-	RS_Lob = { "НАВЕС", UDim2.fromScale(0.26, 0.36) },
-	RS_Action = { "ОТБОР/ФИНТ", UDim2.fromScale(0.52, 0.24) },
-	RS_Dash = { "РЫВОК", UDim2.fromScale(0.78, 0.24) },
-	RS_Sprint = { "БЕГ", UDim2.fromScale(0.02, 0.5) },
+	RS_Shoot = { "SHOOT", UDim2.fromScale(0.52, 0.5) },
+	RS_Pass = { "PASS", UDim2.fromScale(0.26, 0.62) },
+	RS_Lob = { "LOB", UDim2.fromScale(0.26, 0.36) },
+	RS_Action = { "TACKLE/DRIBBLE", UDim2.fromScale(0.52, 0.24) },
+	RS_Dash = { "DASH", UDim2.fromScale(0.78, 0.24) },
+	RS_Sprint = { "SPRINT", UDim2.fromScale(0.02, 0.5) },
 	RS_Ability1 = { "I", UDim2.fromScale(0.02, 0.1) },
 	RS_Ability2 = { "II", UDim2.fromScale(0.26, 0.1) },
-	RS_Ability3 = { "УЛЬТА", UDim2.fromScale(0.52, 0.0) },
+	RS_Ability3 = { "ULT", UDim2.fromScale(0.52, 0.0) },
 }
 
 local function bind(name: string, inputNames: { string }, handler)
@@ -6529,11 +6520,11 @@ local function setText(label: TextLabel, value: string)
 end
 
 local KEY_NAMES = {
-	MouseButton1 = "ЛКМ",
-	MouseButton2 = "ПКМ",
+	MouseButton1 = "LMB",
+	MouseButton2 = "RMB",
 	LeftShift = "Shift",
 	LeftControl = "Ctrl",
-	Space = "Пробел",
+	Space = "Space",
 }
 
 local function keyName(names: { string }): string
@@ -6726,11 +6717,11 @@ local function buildBars()
 		BackgroundTransparency = 1,
 	}, root)
 
-	chargeHolder, chargeFill = bar(cluster, 0, 12, "УДАР", GOLD)
+	chargeHolder, chargeFill = bar(cluster, 0, 12, "SHOT", GOLD)
 	chargeHolder.Visible = false
-	local _, stamina = bar(cluster, 26, 10, "СИЛЫ", WHITE)
+	local _, stamina = bar(cluster, 26, 10, "STAMINA", WHITE)
 	staminaFill = stamina
-	local resonanceHolder, resonance = bar(cluster, 48, 12, "РЕЗОНАНС", WHITE)
+	local resonanceHolder, resonance = bar(cluster, 48, 12, "RESONANCE", WHITE)
 	resonanceFill = resonance
 	resonanceGlow = border(resonanceHolder, WHITE, 2, 1)
 	resonanceHolder.Visible = STYLES_ON
@@ -6739,7 +6730,7 @@ local function buildBars()
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UserInputService.TouchEnabled and UDim2.new(0.5, 0, 1, -104) or UDim2.new(0.5, 0, 1, -184 + BARS_SHIFT),
 		Size = UDim2.fromOffset(300, 22),
-		Text = "МЯЧ У ТЕБЯ",
+		Text = "YOU HAVE THE BALL",
 		TextColor3 = GOLD,
 		TextSize = 15,
 		TextStrokeTransparency = 0.4,
@@ -6856,9 +6847,9 @@ local function buildSlots()
 		slots[key] = { frame = frame, stroke = stroke, name = nameLabel, overlay = overlay, time = timeLabel, total = 1 }
 	end
 
-	slots.Dash.name.Text = "РЫВОК"
+	slots.Dash.name.Text = "DASH"
 	slots.Dash.total = Config.Dash.Cooldown
-	slots.Action.name.Text = "ПОДКАТ"
+	slots.Action.name.Text = "TACKLE"
 	slots.Action.total = Config.Tackle.Cooldown
 end
 
@@ -6904,7 +6895,7 @@ local function updateSlots(hasBall: boolean, resonance: number)
 			-- Слот показывает то действие, которое сейчас сработает по этой клавише.
 			cooldownKey = hasBall and "Dribble" or "Tackle"
 			slot.total = hasBall and Config.Dribble.Cooldown or Config.Tackle.Cooldown
-			setText(slot.name, hasBall and "ДРИБЛИНГ" or "ПОДКАТ")
+			setText(slot.name, hasBall and "DRIBBLE" or "TACKLE")
 		end
 		local remaining = State.cooldown(cooldownKey)
 		local fraction = math.clamp(remaining / math.max(slot.total, 0.01), 0, 1)
@@ -6952,20 +6943,20 @@ local helpPanel: Frame, helpChip: TextLabel
 local function buildHelp()
 	local c = Config.Controls
 	local lines = {
-		{ "WASD / Пробел", "движение, прыжок" },
-		{ keyName(c.Sprint), "бег (тратит силы)" },
-		{ keyName(c.Shoot) .. " (держать)", "удар: дольше — сильнее" },
-		{ keyName(c.Action), "подкат, а с мячом — дриблинг" },
-		{ keyName(c.Pass), "пас партнёру" },
-		{ keyName(c.Lob), "навес" },
-		{ keyName(c.Dash), "рывок" },
+		{ "WASD / Space", "move, jump" },
+		{ keyName(c.Sprint), "sprint (uses stamina)" },
+		{ keyName(c.Shoot) .. " (hold)", "shoot: hold longer, kick harder" },
+		{ keyName(c.Action), "tackle; with the ball: dribble" },
+		{ keyName(c.Pass), "pass to a teammate" },
+		{ keyName(c.Lob), "lob" },
+		{ keyName(c.Dash), "dash" },
 	}
 	if STYLES_ON then
-		table.insert(lines, { keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "способности стиля" })
-		table.insert(lines, { keyName(c.Ability3), "ульта (полный Резонанс)" })
-		table.insert(lines, { keyName(c.StyleMenu), "сменить стиль" })
+		table.insert(lines, { keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "style abilities" })
+		table.insert(lines, { keyName(c.Ability3), "ultimate (full Resonance)" })
+		table.insert(lines, { keyName(c.StyleMenu), "change style" })
 	end
-	table.insert(lines, { c.ShiftLock == "LeftControl" and "Ctrl" or c.ShiftLock, "закрепить камеру" })
+	table.insert(lines, { c.ShiftLock == "LeftControl" and "Ctrl" or c.ShiftLock, "lock camera" })
 
 	helpPanel = make("Frame", {
 		Name = "Help",
@@ -6981,7 +6972,7 @@ local function buildHelp()
 	text({
 		Position = UDim2.fromOffset(14, 10),
 		Size = UDim2.new(1, -28, 0, 18),
-		Text = "УПРАВЛЕНИЕ   [" .. keyName(c.Help) .. " — скрыть]",
+		Text = "CONTROLS   [" .. keyName(c.Help) .. " to hide]",
 		TextColor3 = GOLD,
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -7012,7 +7003,7 @@ local function buildHelp()
 		Size = UDim2.fromOffset(190, 26),
 		BackgroundColor3 = PANEL,
 		BackgroundTransparency = 0.25,
-		Text = keyName(c.Help) .. " — управление",
+		Text = keyName(c.Help) .. ": controls",
 		TextColor3 = MUTED,
 		TextSize = 12,
 		Visible = false,
@@ -7041,7 +7032,7 @@ local function setMenu(open: boolean)
 			local selected = id == current
 			card.stroke.Transparency = selected and 0 or 0.7
 			card.stroke.Thickness = selected and 3 or 1
-			card.button.Text = selected and "ВЫБРАН" or "ВЫБРАТЬ"
+			card.button.Text = selected and "SELECTED" or "SELECT"
 		end
 	end
 end
@@ -7094,7 +7085,7 @@ local function buildStyleCard(style, parent: Instance, order: number)
 		Position = UDim2.fromOffset(14, 66),
 		Size = UDim2.new(1, -28, 0, 30),
 		Font = Enum.Font.GothamMedium,
-		Text = "«" .. (style.tagline or "") .. "»",
+		Text = '"' .. (style.tagline or "") .. '"',
 		TextSize = 12,
 		TextWrapped = true,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -7150,7 +7141,7 @@ local function buildStyleCard(style, parent: Instance, order: number)
 		BackgroundColor3 = style.color,
 		BorderSizePixel = 0,
 		Font = Enum.Font.GothamBlack,
-		Text = "ВЫБРАТЬ",
+		Text = "SELECT",
 		TextColor3 = Color3.fromRGB(14, 16, 24),
 		TextSize = 14,
 		AutoButtonColor = true,
@@ -7172,7 +7163,7 @@ local function buildStyleMenu()
 		BackgroundTransparency = 0.15,
 		BorderSizePixel = 0,
 		Font = Enum.Font.GothamBold,
-		Text = "СТИЛЬ",
+		Text = "STYLE",
 		TextColor3 = WHITE,
 		TextSize = 13,
 	}, root)
@@ -7210,7 +7201,7 @@ local function buildStyleMenu()
 		Position = UDim2.fromOffset(24, 16),
 		Size = UDim2.new(1, -100, 0, 30),
 		Font = Enum.Font.GothamBlack,
-		Text = "ВЫБЕРИ СТИЛЬ",
+		Text = "CHOOSE YOUR STYLE",
 		TextSize = 24,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 10,
@@ -7271,11 +7262,11 @@ end
 ---------------------------------------------------------------------------
 
 local PHASE_TEXT = {
-	Waiting = "ОЖИДАНИЕ ИГРОКОВ",
-	Kickoff = "РОЗЫГРЫШ",
+	Waiting = "WAITING FOR PLAYERS",
+	Kickoff = "KICKOFF",
 	Playing = "",
-	Goal = "ГОЛ",
-	FullTime = "МАТЧ ОКОНЧЕН — СКОРО НОВЫЙ",
+	Goal = "GOAL",
+	FullTime = "FULL TIME: NEXT MATCH SOON",
 }
 
 local function updateScale()
@@ -7304,7 +7295,7 @@ local function onRender()
 
 	if STYLES_ON then
 		local style = State.style()
-		setText(styleButton, string.format("СТИЛЬ: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
+		setText(styleButton, string.format("STYLE: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
 	end
 
 	-- Силы.
@@ -7334,12 +7325,12 @@ end
 local function hookEvents()
 	FxEvents.on("Countdown", function(data)
 		local team = Config.Teams[data.team]
-		local subtitle = team and ("Разыгрывает " .. team.Name) or ""
+		local subtitle = team and (team.Name .. " KICKS OFF") or ""
 		Hud.banner(tostring(data.n), subtitle, WHITE, 0.8)
 	end)
 
 	FxEvents.on("Whistle", function()
-		Hud.banner("ИГРА!", "", GOLD, 0.9)
+		Hud.banner("PLAY!", "", GOLD, 0.9)
 	end)
 
 	FxEvents.on("Goal", function(data)
@@ -7352,18 +7343,18 @@ local function hookEvents()
 				subtitle ..= "  ·  " .. style.name
 			end
 			if data.assistName and data.assistName ~= "" then
-				subtitle ..= "   (пас: " .. data.assistName .. ")"
+				subtitle ..= "   (assist: " .. data.assistName .. ")"
 			end
 		end
-		Hud.banner("ГОЛ!", subtitle, team and team.Color or WHITE, 3.2)
+		Hud.banner("GOAL!", subtitle, team and team.Color or WHITE, 3.2)
 	end)
 
 	FxEvents.on("FullTime", function(data)
-		local title = "НИЧЬЯ"
+		local title = "DRAW"
 		local color = WHITE
 		local winner = Config.Teams[data.winner]
 		if winner then
-			title = "ПОБЕДА: " .. winner.Name
+			title = winner.Name .. " WINS"
 			color = winner.Color
 		end
 		Hud.banner(title, string.format("%d : %d", data.home or 0, data.away or 0), color, 6)
@@ -7602,7 +7593,7 @@ local function assetTrack(rig, character: Model, name: string): AnimationTrack?
 			track = result
 			track.Priority = Enum.AnimationPriority.Action
 		else
-			warn(string.format("[Анимации] не удалось загрузить %s (%s): %s", name, id, tostring(result)))
+			warn(string.format("[Animations] could not load %s (%s): %s", name, id, tostring(result)))
 		end
 	end
 	rig.assets[name] = track or false
