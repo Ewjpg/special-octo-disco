@@ -234,7 +234,11 @@ local function stepRig(rig, dt: number)
 			table.remove(rig.tracks, i)
 		else
 			track.weight = weight * track.maxWeight
-			AnimSampler.sample(anim, track.time, track.pose)
+			if anim.transform then
+				AnimSampler.sampleTransforms(anim, track.time, track.pose)
+			else
+				AnimSampler.sample(anim, track.time, track.pose)
+			end
 		end
 	end
 
@@ -253,7 +257,13 @@ local function stepRig(rig, dt: number)
 		local frame = rig.frames[name]
 		for _, track in ipairs(rig.tracks) do
 			local value = track.pose[name]
-			if value and track.weight > 0 then
+			if value and track.weight > 0 and track.anim.transform then
+				-- Blender clip: the value already is the Motor6D.Transform.
+				local s = rig.scale or 1
+				local desired = s ~= 1 and (value - value.Position + value.Position * s) or value
+				result = result:Lerp(desired, track.weight)
+				touched = true
+			elseif value and track.weight > 0 then
 				local pivots = track.anim.pivots
 				local pivot = pivots and pivots[name]
 				local s = rig.scale or 1

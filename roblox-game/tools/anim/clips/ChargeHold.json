@@ -1,0 +1,99 @@
+{
+ "name": "ChargeHold",
+ "fps": 30,
+ "duration": 0.7,
+ "loop": true,
+ "priority": "Action",
+ "keyframes": [
+  {
+   "t": 0,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -6,
+     "turn": -22
+    },
+    "Neck": {
+     "turn": 18,
+     "pitch": 6
+    },
+    "Right Shoulder": {
+     "swing": -40,
+     "spread": 28
+    },
+    "Left Shoulder": {
+     "swing": 38,
+     "spread": 48
+    },
+    "Right Hip": {
+     "swing": -58
+    },
+    "Left Hip": {
+     "swing": 12,
+     "spread": 6
+    }
+   }
+  },
+  {
+   "t": 0.35,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -9,
+     "turn": -27
+    },
+    "Neck": {
+     "turn": 22,
+     "pitch": 8
+    },
+    "Right Shoulder": {
+     "swing": -48,
+     "spread": 32
+    },
+    "Left Shoulder": {
+     "swing": 44,
+     "spread": 54
+    },
+    "Right Hip": {
+     "swing": -66
+    },
+    "Left Hip": {
+     "swing": 14,
+     "spread": 7
+    }
+   }
+  },
+  {
+   "t": 0.7,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -6,
+     "turn": -22
+    },
+    "Neck": {
+     "turn": 18,
+     "pitch": 6
+    },
+    "Right Shoulder": {
+     "swing": -40,
+     "spread": 28
+    },
+    "Left Shoulder": {
+     "swing": 38,
+     "spread": 48
+    },
+    "Right Hip": {
+     "swing": -58
+    },
+    "Left Hip": {
+     "swing": 12,
+     "spread": 6
+    }
+   }
+  }
+ ]
+}

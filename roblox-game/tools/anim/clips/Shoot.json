@@ -1,0 +1,112 @@
+{
+ "name": "Shoot",
+ "fps": 30,
+ "duration": 0.52,
+ "loop": false,
+ "priority": "Action",
+ "keyframes": [
+  {
+   "t": 0,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -6,
+     "turn": -22
+    },
+    "Neck": {
+     "turn": 18,
+     "pitch": 6
+    },
+    "Right Shoulder": {
+     "swing": -40,
+     "spread": 28
+    },
+    "Left Shoulder": {
+     "swing": 38,
+     "spread": 48
+    },
+    "Right Hip": {
+     "swing": -58
+    },
+    "Left Hip": {
+     "swing": 12,
+     "spread": 6
+    }
+   }
+  },
+  {
+   "t": 0.08,
+   "ease": "in",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -10,
+     "turn": 8
+    },
+    "Neck": {
+     "turn": -6,
+     "pitch": 12
+    },
+    "Right Shoulder": {
+     "swing": 30,
+     "spread": 34
+    },
+    "Left Shoulder": {
+     "swing": -26,
+     "spread": 60
+    },
+    "Right Hip": {
+     "swing": 72
+    },
+    "Left Hip": {
+     "swing": -8,
+     "spread": 6
+    }
+   }
+  },
+  {
+   "t": 0.2,
+   "ease": "out",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -16,
+     "turn": 16
+    },
+    "Neck": {
+     "turn": -12,
+     "pitch": 14
+    },
+    "Right Shoulder": {
+     "swing": 42,
+     "spread": 40
+    },
+    "Left Shoulder": {
+     "swing": -38,
+     "spread": 64
+    },
+    "Right Hip": {
+     "swing": 108
+    },
+    "Left Hip": {
+     "swing": -14,
+     "spread": 4
+    }
+   }
+  },
+  {
+   "t": 0.52,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  }
+ ]
+}

@@ -883,6 +883,12 @@ for name, anim in pairs(R15) do
 	R6[name] = converted
 end
 
+-- R6 clips authored and checked in Blender (tools/anim) replace the code poses of the same name.
+-- Abilities without a Blender clip (Ram, Cast, PowerStance) keep the retargeted code pose.
+for name, clip in pairs(require(script.Parent.R6Clips)) do
+	R6[name] = clip
+end
+
 local Animations = { R15 = R15, R6 = R6 }
 
 -- Анимация по имени для нужного типа аватара ("R6" или "R15").

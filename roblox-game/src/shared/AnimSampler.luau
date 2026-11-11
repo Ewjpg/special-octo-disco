@@ -69,6 +69,60 @@ function AnimSampler.sample(anim, time: number, out: { [string]: { number } })
 	return out
 end
 
+-- Curves of clips authored in Blender (tools/anim): the same as in the render there.
+local CURVE = {
+	linear = function(u: number): number
+		return u
+	end,
+	constant = function(_: number): number
+		return 0
+	end,
+	["in"] = function(u: number): number
+		return u * u * u
+	end,
+	out = function(u: number): number
+		return 1 - (1 - u) ^ 3
+	end,
+	smooth = function(u: number): number
+		if u < 0.5 then
+			return 4 * u * u * u
+		end
+		return 1 - (-2 * u + 2) ^ 3 / 2
+	end,
+}
+
+local function toTransform(v: { number }): CFrame
+	return CFrame.new(v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12])
+end
+
+-- Clip of Motor6D.Transform keys (R6Clips): out[joint] = CFrame. The ease of a segment is the
+-- one of the key it starts from, and rotations slerp, exactly like the Blender render.
+function AnimSampler.sampleTransforms(anim, time: number, out: { [string]: CFrame })
+	local keys = anim.keys
+	local count = #keys
+	local from, to, alpha = keys[1], keys[1], 0
+	if time >= keys[count].t then
+		from, to = keys[count], keys[count]
+	elseif time > keys[1].t then
+		for i = 1, count - 1 do
+			local a, b = keys[i], keys[i + 1]
+			if time >= a.t and time < b.t then
+				local span = b.t - a.t
+				local raw = span > 0 and (time - a.t) / span or 1
+				from, to, alpha = a, b, (CURVE[a.ease or "smooth"] or CURVE.smooth)(raw)
+				break
+			end
+		end
+	end
+	for _, joint in ipairs(anim.joints) do
+		local a, b = from.pose[joint], to.pose[joint]
+		if a and b then
+			out[joint] = toTransform(a):Lerp(toTransform(b), alpha)
+		end
+	end
+	return out
+end
+
 -- Поза сустава -> CFrame. pivot (необязательно) — точка { x, y, z }, вокруг которой идёт поворот.
 function AnimSampler.toCFrame(v: { number }, pivot: { number }?): CFrame
 	local rotation = CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))

@@ -1,0 +1,123 @@
+{
+ "name": "Stun",
+ "fps": 30,
+ "duration": 0.8,
+ "loop": false,
+ "priority": "Action",
+ "keyframes": [
+  {
+   "t": 0,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  },
+  {
+   "t": 0.08,
+   "ease": "out",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -18,
+     "lean": 8
+    },
+    "Neck": {
+     "pitch": -24,
+     "turn": 10
+    },
+    "Right Shoulder": {
+     "swing": 30,
+     "spread": 60
+    },
+    "Left Shoulder": {
+     "swing": 20,
+     "spread": 70
+    },
+    "Right Hip": {
+     "swing": 22
+    },
+    "Left Hip": {
+     "swing": -6,
+     "spread": 10
+    }
+   }
+  },
+  {
+   "t": 0.3,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": 12,
+     "lean": -10
+    },
+    "Neck": {
+     "pitch": 20,
+     "turn": -8
+    },
+    "Right Shoulder": {
+     "swing": -15,
+     "spread": 35
+    },
+    "Left Shoulder": {
+     "swing": 10,
+     "spread": 30
+    },
+    "Right Hip": {
+     "swing": -8,
+     "spread": 8
+    },
+    "Left Hip": {
+     "swing": 14
+    }
+   }
+  },
+  {
+   "t": 0.5,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": 4,
+     "lean": 6
+    },
+    "Neck": {
+     "pitch": 8
+    },
+    "Right Shoulder": {
+     "swing": 0,
+     "spread": 18
+    },
+    "Left Shoulder": {
+     "swing": 0,
+     "spread": 15
+    },
+    "Right Hip": {
+     "swing": 4
+    },
+    "Left Hip": {
+     "swing": 0
+    }
+   }
+  },
+  {
+   "t": 0.8,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  }
+ ]
+}

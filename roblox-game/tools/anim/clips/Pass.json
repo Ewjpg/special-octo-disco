@@ -1,0 +1,96 @@
+{
+ "name": "Pass",
+ "fps": 30,
+ "duration": 0.36,
+ "loop": false,
+ "priority": "Action",
+ "keyframes": [
+  {
+   "t": 0,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  },
+  {
+   "t": 0.08,
+   "ease": "out",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": 4,
+     "turn": -10
+    },
+    "Neck": {
+     "turn": 8
+    },
+    "Right Shoulder": {
+     "swing": -18,
+     "spread": 22
+    },
+    "Left Shoulder": {
+     "swing": 20,
+     "spread": 30
+    },
+    "Right Hip": {
+     "swing": -32,
+     "spread": 12,
+     "twist": -30
+    },
+    "Left Hip": {
+     "swing": 6
+    }
+   }
+  },
+  {
+   "t": 0.16,
+   "ease": "in",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": 6,
+     "turn": 10
+    },
+    "Neck": {
+     "turn": -4,
+     "pitch": 8
+    },
+    "Right Shoulder": {
+     "swing": 16,
+     "spread": 28
+    },
+    "Left Shoulder": {
+     "swing": -14,
+     "spread": 34
+    },
+    "Right Hip": {
+     "swing": 40,
+     "spread": -14,
+     "twist": -36
+    },
+    "Left Hip": {
+     "swing": -6
+    }
+   }
+  },
+  {
+   "t": 0.36,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  }
+ ]
+}

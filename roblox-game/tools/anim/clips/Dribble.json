@@ -1,0 +1,97 @@
+{
+ "name": "Dribble",
+ "fps": 30,
+ "duration": 0.4,
+ "loop": false,
+ "priority": "Action",
+ "keyframes": [
+  {
+   "t": 0,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  },
+  {
+   "t": 0.08,
+   "ease": "out",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": 10,
+     "lean": -14,
+     "turn": -10
+    },
+    "Neck": {
+     "turn": 10
+    },
+    "Right Shoulder": {
+     "swing": -10,
+     "spread": 55
+    },
+    "Left Shoulder": {
+     "swing": 15,
+     "spread": 40
+    },
+    "Right Hip": {
+     "swing": 30,
+     "spread": 30
+    },
+    "Left Hip": {
+     "swing": -8,
+     "spread": 6
+    }
+   }
+  },
+  {
+   "t": 0.18,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": 14,
+     "lean": 16,
+     "turn": 14
+    },
+    "Neck": {
+     "turn": -10
+    },
+    "Right Shoulder": {
+     "swing": 18,
+     "spread": 40
+    },
+    "Left Shoulder": {
+     "swing": -14,
+     "spread": 58
+    },
+    "Right Hip": {
+     "swing": -12,
+     "spread": 4
+    },
+    "Left Hip": {
+     "swing": 24,
+     "spread": 26
+    }
+   }
+  },
+  {
+   "t": 0.4,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  }
+ ]
+}

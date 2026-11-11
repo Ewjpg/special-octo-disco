@@ -1,0 +1,22 @@
+{
+  "hrp": [0, 3, 0],
+  "parts": {
+    "Torso": {"glb": "Torso"},
+    "Head": {"glb": "Head"},
+    "Right Arm": {"glb": "RightArm"},
+    "Left Arm": {"glb": "LeftArm"},
+    "Right Leg": {"glb": "RightLeg"},
+    "Left Leg": {"glb": "LeftLeg"}
+  },
+  "joints": [
+    {"name":"RootJoint","part0":"HumanoidRootPart","part1":"Torso","c0":{"pos":[0,0,0],"rows":[[-1,0,0],[0,0,1],[0,1,0]]},"c1":{"pos":[0,0,0],"rows":[[-1,0,0],[0,0,1],[0,1,0]]}},
+    {"name":"Neck","part0":"Torso","part1":"Head","c0":{"pos":[0,1,0],"rows":[[-1,0,0],[0,0,1],[0,1,0]]},"c1":{"pos":[0,-0.5,0],"rows":[[-1,0,0],[0,0,1],[0,1,0]]}},
+    {"name":"Right Shoulder","part0":"Torso","part1":"Right Arm","c0":{"pos":[1,0.5,0],"rows":[[0,0,1],[0,1,0],[-1,0,0]]},"c1":{"pos":[-0.5,0.5,0],"rows":[[0,0,1],[0,1,0],[-1,0,0]]}},
+    {"name":"Left Shoulder","part0":"Torso","part1":"Left Arm","c0":{"pos":[-1,0.5,0],"rows":[[0,0,-1],[0,1,0],[1,0,0]]},"c1":{"pos":[0.5,0.5,0],"rows":[[0,0,-1],[0,1,0],[1,0,0]]}},
+    {"name":"Right Hip","part0":"Torso","part1":"Right Leg","c0":{"pos":[1,-1,0],"rows":[[0,0,1],[0,1,0],[-1,0,0]]},"c1":{"pos":[0.5,1,0],"rows":[[0,0,1],[0,1,0],[-1,0,0]]}},
+    {"name":"Left Hip","part0":"Torso","part1":"Left Leg","c0":{"pos":[-1,-1,0],"rows":[[0,0,-1],[0,1,0],[1,0,0]]},"c1":{"pos":[-0.5,1,0],"rows":[[0,0,-1],[0,1,0],[1,0,0]]}}
+  ],
+  "feet": ["Right Leg", "Left Leg"],
+  "arms": ["Right Arm", "Left Arm"],
+  "arm_check_below_y": 2.6
+}

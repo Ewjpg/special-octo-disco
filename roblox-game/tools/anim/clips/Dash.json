@@ -1,0 +1,89 @@
+{
+ "name": "Dash",
+ "fps": 30,
+ "duration": 0.38,
+ "loop": false,
+ "priority": "Action",
+ "keyframes": [
+  {
+   "t": 0,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  },
+  {
+   "t": 0.06,
+   "ease": "out",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": 28
+    },
+    "Neck": {
+     "pitch": -22
+    },
+    "Right Shoulder": {
+     "swing": 60,
+     "spread": 10
+    },
+    "Left Shoulder": {
+     "swing": -55,
+     "spread": 10
+    },
+    "Right Hip": {
+     "swing": -40
+    },
+    "Left Hip": {
+     "swing": 55
+    }
+   }
+  },
+  {
+   "t": 0.22,
+   "ease": "linear",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": 22
+    },
+    "Neck": {
+     "pitch": -18
+    },
+    "Right Shoulder": {
+     "swing": 45,
+     "spread": 10
+    },
+    "Left Shoulder": {
+     "swing": -45,
+     "spread": 10
+    },
+    "Right Hip": {
+     "swing": -30
+    },
+    "Left Hip": {
+     "swing": 40
+    }
+   }
+  },
+  {
+   "t": 0.38,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  }
+ ]
+}

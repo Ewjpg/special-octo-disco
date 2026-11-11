@@ -1,0 +1,127 @@
+{
+ "name": "Slide",
+ "fps": 30,
+ "duration": 0.8,
+ "loop": false,
+ "priority": "Action",
+ "keyframes": [
+  {
+   "t": 0,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  },
+  {
+   "t": 0.08,
+   "ease": "out",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -30,
+     "lean": -6
+    },
+    "Neck": {
+     "pitch": 18
+    },
+    "Right Shoulder": {
+     "swing": 40,
+     "spread": 30
+    },
+    "Left Shoulder": {
+     "swing": -20,
+     "spread": 45
+    },
+    "Right Hip": {
+     "swing": 40
+    },
+    "Left Hip": {
+     "swing": -10,
+     "spread": 6
+    }
+   }
+  },
+  {
+   "t": 0.16,
+   "ease": "out",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -58,
+     "lean": -12,
+     "pos": [
+      0,
+      0,
+      0
+     ]
+    },
+    "Neck": {
+     "pitch": 32
+    },
+    "Right Shoulder": {
+     "swing": 50,
+     "spread": 30
+    },
+    "Left Shoulder": {
+     "swing": -30,
+     "spread": 55
+    },
+    "Right Hip": {
+     "swing": 30
+    },
+    "Left Hip": {
+     "swing": -4,
+     "spread": 8
+    }
+   }
+  },
+  {
+   "t": 0.5,
+   "ease": "linear",
+   "ground": true,
+   "joints": {
+    "RootJoint": {
+     "pitch": -54,
+     "lean": -10
+    },
+    "Neck": {
+     "pitch": 28
+    },
+    "Right Shoulder": {
+     "swing": 45,
+     "spread": 30
+    },
+    "Left Shoulder": {
+     "swing": -28,
+     "spread": 55
+    },
+    "Right Hip": {
+     "swing": 26
+    },
+    "Left Hip": {
+     "swing": -2,
+     "spread": 8
+    }
+   }
+  },
+  {
+   "t": 0.8,
+   "ease": "smooth",
+   "ground": true,
+   "joints": {
+    "RootJoint": {},
+    "Neck": {},
+    "Right Shoulder": {},
+    "Left Shoulder": {},
+    "Right Hip": {},
+    "Left Hip": {}
+   }
+  }
+ ]
+}
