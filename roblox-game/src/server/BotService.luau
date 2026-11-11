@@ -56,8 +56,10 @@ local function createRig(teamKey: string): Model?
 	return result :: Model
 end
 
+local humanKeeper = {} -- [teamKey] = true while a player keeps that goal
+
 local function spawnKeeper(teamKey: string)
-	if spawning[teamKey] then
+	if spawning[teamKey] or humanKeeper[teamKey] then
 		return
 	end
 	spawning[teamKey] = true
@@ -96,6 +98,13 @@ local function spawnKeeper(teamKey: string)
 
 	local actor = Actors.register(model, { team = teamKey, isBot = true, isKeeper = true, styleId = "Keeper" })
 	if not actor then
+		model:Destroy()
+		spawning[teamKey] = nil
+		return
+	end
+	if humanKeeper[teamKey] then
+		-- a player took this goal while the bot was being built
+		Actors.unregister(model)
 		model:Destroy()
 		spawning[teamKey] = nil
 		return
@@ -293,7 +302,21 @@ function Bots.step(dt: number)
 	end
 end
 
+-- A player took (or left) a team's goal: remove that team's bot keeper, or bring it back.
+function Bots.setHumanKeeper(teamKey: string, human: boolean)
+	humanKeeper[teamKey] = human or nil
+	local keeper = keepers[teamKey]
+	if human and keeper then
+		keepers[teamKey] = nil
+		Actors.unregister(keeper.actor.character)
+		keeper.actor.character:Destroy()
+	elseif not human and not keeper and BOTS.Goalkeepers then
+		task.spawn(spawnKeeper, teamKey)
+	end
+end
+
 function Bots.init()
+	PlayerService.keeperHook = Bots.setHumanKeeper
 	if not BOTS.Goalkeepers then
 		return
 	end

@@ -10,6 +10,7 @@ local Styles = require(Shared.Styles)
 local Util = require(Shared.Util)
 local Actors = require(script.Parent.Actors)
 local FieldBuilder = require(script.Parent.FieldBuilder)
+local LobbyRoom = require(script.Parent.LobbyRoom)
 local Match = require(script.Parent.MatchService)
 local Physics = require(script.Parent.Physics)
 
@@ -17,15 +18,37 @@ local PlayerService = {}
 
 local teams = {} -- { Home = Team, Away = Team }
 local dataByPlayer = {} -- то, что переживает респаун: стиль, резонанс, перезарядки
+local ROLES = Config.Roles
+
+-- Set by BotService: called with (teamKey, hasHumanKeeper) when a player takes or leaves a team's goal.
+PlayerService.keeperHook = nil :: ((string, boolean) -> ())?
 
 local function countTeam(key: string): number
 	local count = 0
 	for _, data in pairs(dataByPlayer) do
-		if data.team == key then
+		if data.inMatch and data.team == key then
 			count += 1
 		end
 	end
 	return count
+end
+
+local function humanKeeper(key: string): Player?
+	for player, data in pairs(dataByPlayer) do
+		if data.inMatch and data.team == key and data.role == "GK" then
+			return player
+		end
+	end
+	return nil
+end
+
+local function lobbySlot(player: Player): number
+	local list = {}
+	for other in pairs(dataByPlayer) do
+		table.insert(list, other.UserId)
+	end
+	table.sort(list)
+	return table.find(list, player.UserId) or 1
 end
 
 -- Диск под ногами и табличка с именем в цвет команды.
@@ -170,9 +193,35 @@ local function onCharacter(player: Player, character: Model)
 	Physics.tagCharacter(character)
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 
-	local actor = Actors.register(character, { team = data.team, player = player, data = data })
+	if not data.inMatch then
+		-- In the lobby: stand on a pedestal, no actor, no moving around.
+		-- Held in place (anchored first, so the client's own physics cannot drop it to the floor), and
+		-- placed again a moment later in case the client sent a position before the anchor arrived.
+		local rootPart = root :: BasePart
+		local slot = LobbyRoom.slot(lobbySlot(player))
+		rootPart.Anchored = true
+		character:PivotTo(slot)
+		rootPart.CFrame = slot
+		task.delay(0.6, function()
+			if character.Parent and not data.inMatch then
+				rootPart.CFrame = slot
+			end
+		end)
+		humanoid.WalkSpeed = 0
+		humanoid.JumpPower = 0
+		humanoid.UseJumpPower = true
+		return
+	end
+
+	local isKeeper = data.role == "GK"
+	local actor = Actors.register(character, { team = data.team, player = player, data = data, isKeeper = isKeeper })
 	if not actor then
 		return
+	end
+	actor.role = data.role
+	if isKeeper then
+		actor.trapRadius = Config.Bots.KeeperReach
+		actor.trapMaxSpeed = Config.Bots.KeeperCatchSpeed
 	end
 	addKit(actor, player.DisplayName)
 
@@ -197,19 +246,102 @@ local function onCharacter(player: Player, character: Model)
 	Match.placeLate(actor)
 end
 
-local function onPlayer(player: Player)
+local function setTeam(player: Player, key: string?)
+	local data = dataByPlayer[player]
+	data.team = key
+	player.Neutral = key == nil
+	if key then
+		player.Team = teams[key]
+	elseif player.Team then
+		pcall(function()
+			(player :: any).Team = nil
+		end)
+	end
+	player:SetAttribute("TeamKey", key)
+end
+
+-- PLAY in the lobby: join the smaller team in the chosen role and spawn on the pitch.
+-- Returns an error message for the lobby, or nil.
+function PlayerService.requestPlay(player: Player, role: any): string?
+	local data = dataByPlayer[player]
+	if not data or data.inMatch then
+		return nil
+	end
+	if type(role) ~= "string" or not ROLES[role] or not table.find(ROLES.order, role) then
+		role = ROLES.default
+	end
 	local key = countTeam("Home") <= countTeam("Away") and "Home" or "Away"
+	if role == "GK" then
+		local other = key == "Home" and "Away" or "Home"
+		if humanKeeper(key) then
+			if humanKeeper(other) then
+				return "BOTH GOALS ARE TAKEN"
+			end
+			key = other
+		end
+	end
+	data.role = role
+	data.inMatch = true
+	data.resonance = 0
+	setTeam(player, key)
+	player:SetAttribute("Role", role)
+	player:SetAttribute("InMatch", true)
+	if role == "GK" and PlayerService.keeperHook then
+		PlayerService.keeperHook(key, true)
+	end
+	player:LoadCharacter()
+	return nil
+end
+
+-- Back to the lobby from a match.
+function PlayerService.toLobby(player: Player)
+	local data = dataByPlayer[player]
+	if not data or not data.inMatch then
+		return
+	end
+	local key = data.team
+	local wasKeeper = data.role == "GK"
+	data.inMatch = false
+	setTeam(player, nil)
+	player:SetAttribute("InMatch", false)
+	if player.Character then
+		Actors.unregister(player.Character)
+	end
+	if wasKeeper and key and PlayerService.keeperHook then
+		PlayerService.keeperHook(key, false)
+	end
+	player:LoadCharacter()
+end
+
+-- Style picked in the lobby (in a match the SelectStyle action does it).
+function PlayerService.lobbyStyle(player: Player, styleId: any)
+	local data = dataByPlayer[player]
+	local style = type(styleId) == "string" and Styles.byId[styleId] or nil
+	if not data or not style or style.selectable == false then
+		return
+	end
+	data.styleId = style.id
+	player:SetAttribute("Style", style.id)
+	local actor = player.Character and Actors.get(player.Character)
+	if actor then
+		Actors.applyStyle(actor, style.id)
+	end
+end
+
+local function onPlayer(player: Player)
 	local data = {
-		team = key,
+		team = nil,
+		inMatch = false,
+		role = ROLES.default,
 		styleId = Styles.default,
 		resonance = 0,
 		cooldowns = {},
 	}
 	dataByPlayer[player] = data
 
-	player.Neutral = false
-	player.Team = teams[key]
-	player:SetAttribute("TeamKey", key)
+	setTeam(player, nil)
+	player:SetAttribute("InMatch", false)
+	player:SetAttribute("Role", data.role)
 	player:SetAttribute("Style", data.styleId)
 	player:SetAttribute("Stamina", Config.Player.MaxStamina)
 	player:SetAttribute("MaxStamina", Config.Player.MaxStamina)
@@ -225,6 +357,7 @@ end
 
 function PlayerService.init()
 	teams = FieldBuilder.ensureTeams()
+	LobbyRoom.build()
 	Players.RespawnTime = 2
 
 	Players.PlayerAdded:Connect(onPlayer)
@@ -236,7 +369,11 @@ function PlayerService.init()
 		if player.Character then
 			Actors.unregister(player.Character)
 		end
+		local data = dataByPlayer[player]
 		dataByPlayer[player] = nil
+		if data and data.inMatch and data.role == "GK" and data.team and PlayerService.keeperHook then
+			PlayerService.keeperHook(data.team, false)
+		end
 	end)
 end
 

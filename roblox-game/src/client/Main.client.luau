@@ -12,6 +12,7 @@ local Controls = require(Client.Controls)
 local Hud = require(Client.Hud)
 local Cinematics = require(Client.Cinematics)
 local Locomotion = require(Client.Locomotion)
+local Lobby = require(Client.Lobby)
 
 -- Рюкзак и полоска здоровья в футболе не нужны.
 for _, coreGui in ipairs({ Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health, Enum.CoreGuiType.EmotesMenu }) do
@@ -28,3 +29,4 @@ Controls.start()
 Hud.start()
 Cinematics.start()
 Locomotion.start()
+Lobby.start()

@@ -195,8 +195,21 @@ local Client = alice:FindFirstChildOfClass("PlayerScripts").Client
 local ClientState = Emu.client.require(Client.State)
 local ClientControls = Emu.client.require(Client.Controls)
 
+-- Lobby: a new player waits on a pedestal, not on the pitch, until PLAY.
+Emu.run(0.6)
+check("new player starts in the lobby", alice:GetAttribute("InMatch") == false and alice.Team == nil)
+check("no actor in the lobby", Actors.ofPlayer(alice) == nil)
+check("lobby screen shown", alice.PlayerGui:FindFirstChild("Lobby") ~= nil and alice.PlayerGui.Lobby.Bar.Visible == true)
+check("character held on a lobby pedestal", rootOf(alice).Anchored == true)
+ClientState.send("LobbyStyle", "MinamiShin")
+ClientState.send("Play", "FW")
+Emu.run(2)
+check("Minami Shin picked in the lobby", alice:GetAttribute("Style") == "MinamiShin", alice:GetAttribute("Style"))
+check("PLAY puts the player in the match", alice:GetAttribute("InMatch") == true and alice:GetAttribute("Role") == "FW")
+check("lobby bar hidden in the match", alice.PlayerGui.Lobby.Bar.Visible == false)
+
 check("игрок в команде", alice.Team ~= nil, alice.Team and alice.Team.Name)
-check("стиль по умолчанию", alice:GetAttribute("Style") == Styles.default, alice:GetAttribute("Style"))
+check("стиль сохранился после входа", alice:GetAttribute("Style") == "MinamiShin", alice:GetAttribute("Style"))
 check("персонаж зарегистрирован как актёр", Actors.ofPlayer(alice) ~= nil)
 check("метка команды на персонаже", alice.Character:FindFirstChild("TeamRing") ~= nil)
 local hud = alice.PlayerGui:FindFirstChild("ResonanceHud")
@@ -250,8 +263,11 @@ end
 
 Emu.run(2)
 if Styles.enabled then
-	check("меню стилей открылось при входе", ClientControls.menuOpen == true)
-	-- Закрываем меню кнопкой M.
+	-- the style is picked in the lobby now; in a match M still opens the menu
+	check("style menu closed when the match starts", ClientControls.menuOpen == false)
+	Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
+	Emu.run(0.1)
+	check("M opens the style menu", ClientControls.menuOpen == true)
 	Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
 	Emu.run(0.1)
 	check("меню стилей закрывается", ClientControls.menuOpen == false)
@@ -392,6 +408,11 @@ section("Стили и способности")
 -- Бобу Roblox «выдаёт» R15: сервер должен пересобрать его в R6.
 local bob = Emu.addPlayer("Bob", 202, "R15")
 local carol = Emu.addPlayer("Carol", 303)
+Emu.run(1)
+-- they have no client in the emulator: press PLAY for them on the server
+local PlayerService = Emu.server.require(Server.PlayerService)
+PlayerService.requestPlay(bob, "DF")
+PlayerService.requestPlay(carol, "MF")
 Emu.run(1.5)
 do
 	local humanoid = bob.Character and bob.Character:FindFirstChildOfClass("Humanoid")
@@ -620,7 +641,7 @@ for _, style in ipairs(Styles.list) do
 	check("характеристики стиля применены", Actors.ofPlayer(alice).style.id == style.id)
 	Emu.run(4.3) -- перезарядка после смены стиля
 
-	for slot = 1, 3 do
+	for slot = 1, #style.abilities do -- a style may not have all three yet (Minami Shin: none so far)
 		waitLive(40)
 		local ability = style.abilities[slot]
 		local scenario = scenarios[ability.id] or {}

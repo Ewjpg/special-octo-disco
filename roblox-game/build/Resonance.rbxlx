@@ -1091,6 +1091,23 @@ Config.Avatar = {
 	ForceRig = true, -- если Roblox выдал аватар другого типа, сервер пересоберёт персонажа в нужный
 }
 
+-- Roles picked in the lobby. Slots: where players of that role line up at kick-off, as fractions of the
+-- half length (from their own goal line) and of the half width (from the middle).
+Config.Roles = {
+	order = { "FW", "MF", "DF", "GK" },
+	FW = { name = "FORWARD", slots = { { 0.86, 0 }, { 0.8, -0.36 }, { 0.8, 0.36 } } },
+	MF = { name = "MIDFIELDER", slots = { { 0.6, 0 }, { 0.58, -0.46 }, { 0.58, 0.46 }, { 0.5, -0.2 }, { 0.5, 0.2 } } },
+	DF = { name = "DEFENDER", slots = { { 0.3, 0 }, { 0.3, -0.4 }, { 0.3, 0.4 }, { 0.22, -0.2 }, { 0.22, 0.2 } } },
+	GK = { name = "GOALKEEPER", slots = {} }, -- one per team; replaces that team's bot keeper
+	default = "MF",
+}
+
+-- The lobby: a closed room high above the stadium where players wait before pressing PLAY.
+Config.Lobby = {
+	Origin = Vector3.new(0, 700, 0),
+	PedestalSpacing = 9,
+}
+
 Config.Match = {
 	Duration = 300, -- длина матча, секунды
 	KickoffCountdown = 3, -- отсчёт перед розыгрышем
@@ -5800,6 +5817,31 @@ return {
         </Item>
         <Item class="ModuleScript" referent="27">
           <Properties>
+            <string name="Name">MinamiShin</string>
+            <string name="Source"><![CDATA[-- Minami Shin. Style colour: dark crimson.
+-- Abilities are still to be designed (the owner will describe them); until then the style plays like
+-- a normal player and its three slots stay empty.
+
+local COLOR = Color3.fromRGB(128, 12, 46) -- dark crimson
+local COLOR2 = Color3.fromRGB(196, 34, 78)
+
+return {
+	id = "MinamiShin",
+	order = 1,
+	name = "Minami Shin",
+	role = "",
+	tagline = "",
+	description = "",
+	color = COLOR,
+	color2 = COLOR2,
+	stats = { speed = 1.0, shot = 1.0, stamina = 1.0, tackle = 1.0, trap = 1.0 },
+	abilities = {},
+}
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="28">
+          <Properties>
             <string name="Name">_Template</string>
             <string name="Source"><![CDATA[-- ШАБЛОН СТИЛЯ (твой OC).
 -- 1. Скопируй этот файл, назови без подчёркивания в начале (например Phoenix.luau).
@@ -5882,7 +5924,7 @@ return {
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="28">
+      <Item class="ModuleScript" referent="29">
         <Properties>
           <string name="Name">Util</string>
           <string name="Source"><![CDATA[-- Мелкая математика, общая для сервера и клиента.
@@ -5997,15 +6039,15 @@ return Util
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="29">
+  <Item class="ServerScriptService" referent="30">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="30">
+    <Item class="Folder" referent="31">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="31">
+      <Item class="ModuleScript" referent="32">
         <Properties>
           <string name="Name">ActionService</string>
           <string name="Source"><![CDATA[-- Принимает действия игроков (RemoteEvent "Action"), проверяет их и выполняет:
@@ -6023,6 +6065,7 @@ local Actors = require(script.Parent.Actors)
 local Ball = require(script.Parent.BallService)
 local Match = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
+local PlayerService = require(script.Parent.PlayerService)
 
 local SHOT, PASS, LOB = Config.Shot, Config.Pass, Config.Lob
 local TACKLE, DASH, DRIBBLE, RES = Config.Tackle, Config.Dash, Config.Dribble, Config.Resonance
@@ -6463,6 +6506,20 @@ function Actions.init()
 		if type(name) ~= "string" or not allow(player) then
 			return
 		end
+		-- Lobby requests come from players who are not on the pitch yet.
+		if name == "Play" then
+			local problem = PlayerService.requestPlay(player, ...)
+			if problem then
+				player:SetAttribute("LobbyError", problem .. "#" .. os.clock())
+			end
+			return
+		elseif name == "ToLobby" then
+			PlayerService.toLobby(player)
+			return
+		elseif name == "LobbyStyle" then
+			PlayerService.lobbyStyle(player, ...)
+			return
+		end
 		local handler = handlers[name]
 		local actor = Actors.ofPlayer(player)
 		if handler and actor and actor.alive then
@@ -6492,7 +6549,7 @@ return Actions
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="32">
+      <Item class="ModuleScript" referent="33">
         <Properties>
           <string name="Name">Actors</string>
           <string name="Source"><![CDATA[-- «Актёр» — любой персонаж на поле: игрок или бот.
@@ -6866,7 +6923,7 @@ return Actors
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="33">
+      <Item class="ModuleScript" referent="34">
         <Properties>
           <string name="Name">BallService</string>
           <string name="Source"><![CDATA[-- Мяч. Сервер решает всё: у кого мяч, куда он летит, принят он или отбит, был ли гол.
@@ -7412,7 +7469,7 @@ return Ball
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="34">
+      <Item class="ModuleScript" referent="35">
         <Properties>
           <string name="Name">BotService</string>
           <string name="Source"><![CDATA[-- Боты-вратари. По одному на команду: держат позицию, прыгают за ударами, выбивают мяч партнёрам.
@@ -7473,8 +7530,10 @@ local function createRig(teamKey: string): Model?
 	return result :: Model
 end
 
+local humanKeeper = {} -- [teamKey] = true while a player keeps that goal
+
 local function spawnKeeper(teamKey: string)
-	if spawning[teamKey] then
+	if spawning[teamKey] or humanKeeper[teamKey] then
 		return
 	end
 	spawning[teamKey] = true
@@ -7513,6 +7572,13 @@ local function spawnKeeper(teamKey: string)
 
 	local actor = Actors.register(model, { team = teamKey, isBot = true, isKeeper = true, styleId = "Keeper" })
 	if not actor then
+		model:Destroy()
+		spawning[teamKey] = nil
+		return
+	end
+	if humanKeeper[teamKey] then
+		-- a player took this goal while the bot was being built
+		Actors.unregister(model)
 		model:Destroy()
 		spawning[teamKey] = nil
 		return
@@ -7710,7 +7776,21 @@ function Bots.step(dt: number)
 	end
 end
 
+-- A player took (or left) a team's goal: remove that team's bot keeper, or bring it back.
+function Bots.setHumanKeeper(teamKey: string, human: boolean)
+	humanKeeper[teamKey] = human or nil
+	local keeper = keepers[teamKey]
+	if human and keeper then
+		keepers[teamKey] = nil
+		Actors.unregister(keeper.actor.character)
+		keeper.actor.character:Destroy()
+	elseif not human and not keeper and BOTS.Goalkeepers then
+		task.spawn(spawnKeeper, teamKey)
+	end
+end
+
 function Bots.init()
+	PlayerService.keeperHook = Bots.setHumanKeeper
 	if not BOTS.Goalkeepers then
 		return
 	end
@@ -7735,7 +7815,7 @@ return Bots
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="35">
+      <Item class="ModuleScript" referent="36">
         <Properties>
           <string name="Name">FieldBuilder</string>
           <string name="Source"><![CDATA[-- Строит весь стадион из деталей при запуске сервера: газон, разметку, ворота, борта, трибуны, крышу, небо и свет.
@@ -8631,7 +8711,239 @@ return FieldBuilder
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Script" referent="36">
+      <Item class="ModuleScript" referent="37">
+        <Properties>
+          <string name="Name">LobbyRoom</string>
+          <string name="Source"><![CDATA[-- The lobby room: a closed players' lounge high above the stadium (Config.Lobby.Origin).
+-- Players stand on lit pedestals in a row and face the camera; the client frames its own character.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+
+local LobbyRoom = {}
+
+local ORIGIN = Config.Lobby.Origin
+local SPACING = Config.Lobby.PedestalSpacing
+local PEDESTALS = 9
+local WIDTH, DEPTH, HEIGHT = 110, 46, 24
+local CRIMSON = Color3.fromRGB(112, 12, 40)
+local STEEL = Color3.fromRGB(46, 50, 58)
+
+local model: Model? = nil
+
+local function part(props: { [string]: any }, parent: Instance): BasePart
+	local p = Instance.new(props.ClassName or "Part")
+	props.ClassName = nil
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	for k, v in pairs(props) do
+		(p :: any)[k] = v
+	end
+	p.Parent = parent
+	return p :: BasePart
+end
+
+-- x offset of pedestal i (1 = middle, then alternating right/left)
+local function slotX(i: number): number
+	local n = (i - 1) % PEDESTALS
+	local k = math.ceil(n / 2)
+	return (n % 2 == 1 and 1 or -1) * k * SPACING
+end
+
+-- Where player number i stands, facing the camera (+Z).
+function LobbyRoom.slot(i: number): CFrame
+	local p = ORIGIN + Vector3.new(slotX(i), 1.6 + 3, 0)
+	return CFrame.lookAt(p, p + Vector3.new(0, 0, 1))
+end
+
+function LobbyRoom.build(): Model
+	if model and model.Parent then
+		return model
+	end
+	local m = Instance.new("Model")
+	m.Name = "Lobby"
+
+	-- Floor: dark polished stone that reflects the lights.
+	part({
+		Name = "Floor",
+		Size = Vector3.new(WIDTH, 1, DEPTH),
+		CFrame = CFrame.new(ORIGIN + Vector3.new(0, -0.5, 0)),
+		Material = Enum.Material.Marble,
+		Color = Color3.fromRGB(28, 30, 36),
+		Reflectance = 0.08,
+	}, m)
+	part({
+		Name = "Ceiling",
+		Size = Vector3.new(WIDTH, 1, DEPTH),
+		CFrame = CFrame.new(ORIGIN + Vector3.new(0, HEIGHT + 0.5, 0)),
+		Material = Enum.Material.Concrete,
+		Color = Color3.fromRGB(36, 38, 44),
+	}, m)
+	-- Walls: concrete, back wall a little warmer.
+	local walls = {
+		{ Vector3.new(WIDTH, HEIGHT, 1), Vector3.new(0, HEIGHT / 2, -DEPTH / 2) },
+		{ Vector3.new(WIDTH, HEIGHT, 1), Vector3.new(0, HEIGHT / 2, DEPTH / 2) },
+		{ Vector3.new(1, HEIGHT, DEPTH), Vector3.new(-WIDTH / 2, HEIGHT / 2, 0) },
+		{ Vector3.new(1, HEIGHT, DEPTH), Vector3.new(WIDTH / 2, HEIGHT / 2, 0) },
+	}
+	for i, w in ipairs(walls) do
+		part({
+			Name = "Wall" .. i,
+			Size = w[1],
+			CFrame = CFrame.new(ORIGIN + w[2]),
+			Material = Enum.Material.Concrete,
+			Color = i == 1 and Color3.fromRGB(58, 56, 60) or Color3.fromRGB(44, 46, 52),
+		}, m)
+	end
+
+	-- Back wall: vertical wooden slats and a crimson light line along the floor.
+	for x = -WIDTH / 2 + 3, WIDTH / 2 - 3, 3 do
+		part({
+			Name = "Slat",
+			Size = Vector3.new(1.4, HEIGHT - 6, 0.5),
+			CFrame = CFrame.new(ORIGIN + Vector3.new(x, HEIGHT / 2 + 1, -DEPTH / 2 + 0.8)),
+			Material = Enum.Material.WoodPlanks,
+			Color = Color3.fromRGB(96, 66, 44),
+		}, m)
+	end
+	for _, z in ipairs({ -DEPTH / 2 + 1.2, DEPTH / 2 - 1.2 }) do
+		local strip = part({
+			Name = "FloorLight",
+			Size = Vector3.new(WIDTH - 2, 0.1, 0.25),
+			CFrame = CFrame.new(ORIGIN + Vector3.new(0, 0.1, z)),
+			Material = Enum.Material.Neon,
+			Color = CRIMSON,
+			CanCollide = false,
+		}, m)
+		local glow = Instance.new("SurfaceLight")
+		glow.Face = Enum.NormalId.Top
+		glow.Color = CRIMSON
+		glow.Brightness = 1.4
+		glow.Range = 10
+		glow.Angle = 120
+		glow.Parent = strip
+	end
+
+	-- Big screen on the back wall.
+	local screen = part({
+		Name = "Screen",
+		Size = Vector3.new(44, 12, 0.6),
+		CFrame = CFrame.new(ORIGIN + Vector3.new(0, 14.5, -DEPTH / 2 + 1.4)),
+		Material = Enum.Material.SmoothPlastic,
+		Color = Color3.fromRGB(10, 10, 14),
+	}, m)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Back -- the screen faces +Z, into the room
+	gui.PixelsPerStud = 24
+	gui.LightInfluence = 0
+	gui.Brightness = 1.6
+	gui.Parent = screen
+	local bg = Instance.new("Frame")
+	bg.Size = UDim2.fromScale(1, 1)
+	bg.BackgroundColor3 = Color3.new(1, 1, 1)
+	bg.Parent = gui
+	local grad = Instance.new("UIGradient")
+	grad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(52, 120, 255)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(16, 16, 24)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(240, 62, 72)),
+	})
+	grad.Rotation = 0
+	grad.Parent = bg
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Size = UDim2.fromScale(1, 0.62)
+	title.Position = UDim2.fromScale(0, 0.1)
+	title.Font = Enum.Font.GothamBlack
+	title.TextScaled = true
+	title.TextColor3 = Color3.new(1, 1, 1)
+	title.Text = "HOME  vs  AWAY"
+	title.Parent = bg
+	local sub = Instance.new("TextLabel")
+	sub.BackgroundTransparency = 1
+	sub.Size = UDim2.fromScale(1, 0.18)
+	sub.Position = UDim2.fromScale(0, 0.72)
+	sub.Font = Enum.Font.GothamMedium
+	sub.TextScaled = true
+	sub.TextColor3 = Color3.fromRGB(220, 224, 236)
+	sub.Text = "PICK A ROLE  ·  PRESS PLAY"
+	sub.Parent = bg
+
+	-- Ceiling: rows of light panels that actually light the room.
+	for x = -WIDTH / 2 + 12, WIDTH / 2 - 12, 16 do
+		for _, z in ipairs({ -8, 8 }) do
+			local panel = part({
+				Name = "CeilingPanel",
+				Size = Vector3.new(10, 0.3, 3),
+				CFrame = CFrame.new(ORIGIN + Vector3.new(x, HEIGHT - 0.15, z)),
+				Material = Enum.Material.Neon,
+				Color = Color3.fromRGB(255, 244, 228),
+				CanCollide = false,
+			}, m)
+			local light = Instance.new("SurfaceLight")
+			light.Face = Enum.NormalId.Bottom
+			light.Color = Color3.fromRGB(255, 238, 220)
+			light.Brightness = 2.2
+			light.Range = 30
+			light.Angle = 100
+			light.Shadows = true
+			light.Parent = panel
+		end
+	end
+
+	-- Pedestals: brushed steel discs with a light ring and a spotlight from above.
+	for i = 1, PEDESTALS do
+		local base = ORIGIN + Vector3.new(slotX(i), 0, 0)
+		part({
+			Name = "Pedestal",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(1.6, 6.5, 6.5),
+			CFrame = CFrame.new(base + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Material = Enum.Material.Metal,
+			Color = STEEL,
+			Reflectance = 0.05,
+		}, m)
+		local ring = part({
+			Name = "PedestalRing",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.12, 6.7, 6.7),
+			CFrame = CFrame.new(base + Vector3.new(0, 1.2, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Material = Enum.Material.Neon,
+			Color = CRIMSON,
+			CanCollide = false,
+		}, m)
+		ring.Transparency = 0.35
+		local spotHolder = part({
+			Name = "SpotHolder",
+			Size = Vector3.new(1, 1, 1),
+			CFrame = CFrame.new(base + Vector3.new(0, HEIGHT - 2, 6)),
+			Transparency = 1,
+			CanCollide = false,
+		}, m)
+		local spot = Instance.new("SpotLight")
+		spot.Face = Enum.NormalId.Bottom
+		spot.Angle = 40
+		spot.Range = 30
+		spot.Brightness = 3
+		spot.Color = Color3.fromRGB(255, 246, 236)
+		spot.Shadows = true
+		spot.Parent = spotHolder
+	end
+
+	m.Parent = Workspace
+	model = m
+	return m
+end
+
+return LobbyRoom
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="Script" referent="38">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -8692,7 +9004,7 @@ print(string.format("[%s] server started, RemoteEvents: %s", "Resonance", Net.Ac
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="37">
+      <Item class="ModuleScript" referent="39">
         <Properties>
           <string name="Name">MatchService</string>
           <string name="Source"><![CDATA[-- Ход матча: розыгрыш с центра -> игра -> гол -> розыгрыш ... -> финальный свисток -> новый матч.
@@ -8779,13 +9091,44 @@ local function ballSpot(): Vector3
 	return F.Origin + Vector3.new(0, Config.Ball.Radius + 0.05, 0)
 end
 
+local ROLES = Config.Roles
+local ROLE_RANK = { FW = 1, MF = 2, DF = 3 }
+
+-- Players on the pitch (in the lobby does not count).
+local function playersInMatch(): number
+	local count = 0
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player:GetAttribute("InMatch") then
+			count += 1
+		end
+	end
+	return count
+end
+
+-- Number of this actor among same-role teammates (1, 2, ...), by name.
+local function roleIndex(actor): number
+	local index = 1
+	for _, other in ipairs(Actors.teamList(actor.team, false)) do
+		if other ~= actor and other.role == actor.role and actorName(other) < actorName(actor) then
+			index += 1
+		end
+	end
+	return index
+end
+
 -- Поставить актёра на позицию. index — номер в команде, isKicker — разыгрывает мяч с центра.
+-- Players with a role (FW/MF/DF) line up in that role's slots; GK goes in goal.
 function Match.place(actor, index: number, isKicker: boolean)
 	local position
+	local role = actor.role and ROLES[actor.role]
 	if actor.isKeeper then
 		position = F.fromOwnGoal(actor.side, 5, 0)
 	elseif isKicker then
 		position = F.fromOwnGoal(actor.side, F.HalfLength - 3.4, 0)
+	elseif role and #role.slots > 0 then
+		local slots = role.slots
+		local slot = slots[((roleIndex(actor) - 1) % #slots) + 1]
+		position = F.fromOwnGoal(actor.side, slot[1] * F.HalfLength, slot[2] * F.HalfWidth)
 	else
 		local slot = SLOTS[((index - 1) % #SLOTS) + 1]
 		position = F.fromOwnGoal(actor.side, slot[1] * F.HalfLength, slot[2] * F.HalfWidth)
@@ -8802,7 +9145,12 @@ end
 
 local function sortedTeam(team: string)
 	local list = Actors.teamList(team, false)
+	-- forwards first: the first player of the kicking team takes the kick-off
 	table.sort(list, function(a, b)
+		local ra, rb = ROLE_RANK[a.role] or 2, ROLE_RANK[b.role] or 2
+		if ra ~= rb then
+			return ra < rb
+		end
 		return actorName(a) < actorName(b)
 	end)
 	return list
@@ -8861,7 +9209,7 @@ local function playUntilStop()
 		if pendingGoal then
 			return pendingGoal
 		end
-		if #Players:GetPlayers() == 0 then
+		if playersInMatch() == 0 then
 			return "empty"
 		end
 		Match.timeLeft = math.max(0, Match.timeLeft - dt)
@@ -8919,7 +9267,7 @@ local function runForever()
 		Match.score.Home, Match.score.Away = 0, 0
 		Match.timeLeft = MATCH.Duration
 		replicate()
-		while #Players:GetPlayers() == 0 do
+		while playersInMatch() == 0 do
 			task.wait(0.5)
 		end
 		task.wait(1.5) -- дать персонажу загрузиться
@@ -8962,7 +9310,7 @@ return Match
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="38">
+      <Item class="ModuleScript" referent="40">
         <Properties>
           <string name="Name">Net</string>
           <string name="Source"><![CDATA[-- Создаёт RemoteEvent'ы и даёт короткие функции для отправки эффектов клиентам.
@@ -9001,7 +9349,7 @@ return Net
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="39">
+      <Item class="ModuleScript" referent="41">
         <Properties>
           <string name="Name">Physics</string>
           <string name="Source"><![CDATA[-- Группы столкновений.
@@ -9052,7 +9400,7 @@ return Physics
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="40">
+      <Item class="ModuleScript" referent="42">
         <Properties>
           <string name="Name">PlayerService</string>
           <string name="Source"><![CDATA[-- Игроки: распределение по командам, регистрация персонажа как «актёра», командные метки.
@@ -9067,6 +9415,7 @@ local Styles = require(Shared.Styles)
 local Util = require(Shared.Util)
 local Actors = require(script.Parent.Actors)
 local FieldBuilder = require(script.Parent.FieldBuilder)
+local LobbyRoom = require(script.Parent.LobbyRoom)
 local Match = require(script.Parent.MatchService)
 local Physics = require(script.Parent.Physics)
 
@@ -9074,15 +9423,37 @@ local PlayerService = {}
 
 local teams = {} -- { Home = Team, Away = Team }
 local dataByPlayer = {} -- то, что переживает респаун: стиль, резонанс, перезарядки
+local ROLES = Config.Roles
+
+-- Set by BotService: called with (teamKey, hasHumanKeeper) when a player takes or leaves a team's goal.
+PlayerService.keeperHook = nil :: ((string, boolean) -> ())?
 
 local function countTeam(key: string): number
 	local count = 0
 	for _, data in pairs(dataByPlayer) do
-		if data.team == key then
+		if data.inMatch and data.team == key then
 			count += 1
 		end
 	end
 	return count
+end
+
+local function humanKeeper(key: string): Player?
+	for player, data in pairs(dataByPlayer) do
+		if data.inMatch and data.team == key and data.role == "GK" then
+			return player
+		end
+	end
+	return nil
+end
+
+local function lobbySlot(player: Player): number
+	local list = {}
+	for other in pairs(dataByPlayer) do
+		table.insert(list, other.UserId)
+	end
+	table.sort(list)
+	return table.find(list, player.UserId) or 1
 end
 
 -- Диск под ногами и табличка с именем в цвет команды.
@@ -9227,9 +9598,35 @@ local function onCharacter(player: Player, character: Model)
 	Physics.tagCharacter(character)
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 
-	local actor = Actors.register(character, { team = data.team, player = player, data = data })
+	if not data.inMatch then
+		-- In the lobby: stand on a pedestal, no actor, no moving around.
+		-- Held in place (anchored first, so the client's own physics cannot drop it to the floor), and
+		-- placed again a moment later in case the client sent a position before the anchor arrived.
+		local rootPart = root :: BasePart
+		local slot = LobbyRoom.slot(lobbySlot(player))
+		rootPart.Anchored = true
+		character:PivotTo(slot)
+		rootPart.CFrame = slot
+		task.delay(0.6, function()
+			if character.Parent and not data.inMatch then
+				rootPart.CFrame = slot
+			end
+		end)
+		humanoid.WalkSpeed = 0
+		humanoid.JumpPower = 0
+		humanoid.UseJumpPower = true
+		return
+	end
+
+	local isKeeper = data.role == "GK"
+	local actor = Actors.register(character, { team = data.team, player = player, data = data, isKeeper = isKeeper })
 	if not actor then
 		return
+	end
+	actor.role = data.role
+	if isKeeper then
+		actor.trapRadius = Config.Bots.KeeperReach
+		actor.trapMaxSpeed = Config.Bots.KeeperCatchSpeed
 	end
 	addKit(actor, player.DisplayName)
 
@@ -9254,19 +9651,102 @@ local function onCharacter(player: Player, character: Model)
 	Match.placeLate(actor)
 end
 
-local function onPlayer(player: Player)
+local function setTeam(player: Player, key: string?)
+	local data = dataByPlayer[player]
+	data.team = key
+	player.Neutral = key == nil
+	if key then
+		player.Team = teams[key]
+	elseif player.Team then
+		pcall(function()
+			(player :: any).Team = nil
+		end)
+	end
+	player:SetAttribute("TeamKey", key)
+end
+
+-- PLAY in the lobby: join the smaller team in the chosen role and spawn on the pitch.
+-- Returns an error message for the lobby, or nil.
+function PlayerService.requestPlay(player: Player, role: any): string?
+	local data = dataByPlayer[player]
+	if not data or data.inMatch then
+		return nil
+	end
+	if type(role) ~= "string" or not ROLES[role] or not table.find(ROLES.order, role) then
+		role = ROLES.default
+	end
 	local key = countTeam("Home") <= countTeam("Away") and "Home" or "Away"
+	if role == "GK" then
+		local other = key == "Home" and "Away" or "Home"
+		if humanKeeper(key) then
+			if humanKeeper(other) then
+				return "BOTH GOALS ARE TAKEN"
+			end
+			key = other
+		end
+	end
+	data.role = role
+	data.inMatch = true
+	data.resonance = 0
+	setTeam(player, key)
+	player:SetAttribute("Role", role)
+	player:SetAttribute("InMatch", true)
+	if role == "GK" and PlayerService.keeperHook then
+		PlayerService.keeperHook(key, true)
+	end
+	player:LoadCharacter()
+	return nil
+end
+
+-- Back to the lobby from a match.
+function PlayerService.toLobby(player: Player)
+	local data = dataByPlayer[player]
+	if not data or not data.inMatch then
+		return
+	end
+	local key = data.team
+	local wasKeeper = data.role == "GK"
+	data.inMatch = false
+	setTeam(player, nil)
+	player:SetAttribute("InMatch", false)
+	if player.Character then
+		Actors.unregister(player.Character)
+	end
+	if wasKeeper and key and PlayerService.keeperHook then
+		PlayerService.keeperHook(key, false)
+	end
+	player:LoadCharacter()
+end
+
+-- Style picked in the lobby (in a match the SelectStyle action does it).
+function PlayerService.lobbyStyle(player: Player, styleId: any)
+	local data = dataByPlayer[player]
+	local style = type(styleId) == "string" and Styles.byId[styleId] or nil
+	if not data or not style or style.selectable == false then
+		return
+	end
+	data.styleId = style.id
+	player:SetAttribute("Style", style.id)
+	local actor = player.Character and Actors.get(player.Character)
+	if actor then
+		Actors.applyStyle(actor, style.id)
+	end
+end
+
+local function onPlayer(player: Player)
 	local data = {
-		team = key,
+		team = nil,
+		inMatch = false,
+		role = ROLES.default,
 		styleId = Styles.default,
 		resonance = 0,
 		cooldowns = {},
 	}
 	dataByPlayer[player] = data
 
-	player.Neutral = false
-	player.Team = teams[key]
-	player:SetAttribute("TeamKey", key)
+	setTeam(player, nil)
+	player:SetAttribute("InMatch", false)
+	player:SetAttribute("Role", data.role)
 	player:SetAttribute("Style", data.styleId)
 	player:SetAttribute("Stamina", Config.Player.MaxStamina)
 	player:SetAttribute("MaxStamina", Config.Player.MaxStamina)
@@ -9282,6 +9762,7 @@ end
 
 function PlayerService.init()
 	teams = FieldBuilder.ensureTeams()
+	LobbyRoom.build()
 	Players.RespawnTime = 2
 
 	Players.PlayerAdded:Connect(onPlayer)
@@ -9293,7 +9774,11 @@ function PlayerService.init()
 		if player.Character then
 			Actors.unregister(player.Character)
 		end
+		local data = dataByPlayer[player]
 		dataByPlayer[player] = nil
+		if data and data.inMatch and data.role == "GK" and data.team and PlayerService.keeperHook then
+			PlayerService.keeperHook(data.team, false)
+		end
 	end)
 end
 
@@ -9303,22 +9788,22 @@ return PlayerService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="41">
+  <Item class="StarterPlayer" referent="43">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">40</float>
       <float name="CameraMinZoomDistance">6</float>
       <token name="GameSettingsAvatar">0</token>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="42">
+    <Item class="StarterPlayerScripts" referent="44">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="43">
+      <Item class="Folder" referent="45">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="ModuleScript" referent="44">
+        <Item class="ModuleScript" referent="46">
           <Properties>
             <string name="Name">BallVisuals</string>
             <string name="Source"><![CDATA[-- Всё, что делает мяч красивым на клиенте: шлейф, вращение при ведении, вспышки при отскоках, метка над мячом
@@ -9566,7 +10051,7 @@ return BallVisuals
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="45">
+        <Item class="ModuleScript" referent="47">
           <Properties>
             <string name="Name">Cinematics</string>
             <string name="Source"><![CDATA[-- Dynamic presentation: slanted splash banners (KICK OFF! / GOAL!), radial speed lines,
@@ -9810,7 +10295,7 @@ return Cinematics
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="46">
+        <Item class="ModuleScript" referent="48">
           <Properties>
             <string name="Name">Controls</string>
             <string name="Source"><![CDATA[-- Управление. Клавиши задаются в Config.Controls; на телефоне появляются сенсорные кнопки.
@@ -10333,7 +10818,7 @@ return Controls
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="47">
+        <Item class="ModuleScript" referent="49">
           <Properties>
             <string name="Name">Fx</string>
             <string name="Source"><![CDATA[-- Набор визуальных эффектов. Всё собирается из обычных деталей, частиц и лучей — без загруженных ассетов.
@@ -10862,7 +11347,7 @@ return Fx
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="48">
+        <Item class="ModuleScript" referent="50">
           <Properties>
             <string name="Name">FxEvents</string>
             <string name="Source"><![CDATA[-- Принимает события Fx от сервера и превращает их в анимации, эффекты и звуки.
@@ -11140,7 +11625,7 @@ return FxEvents
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="49">
+        <Item class="ModuleScript" referent="51">
           <Properties>
             <string name="Name">Hud</string>
             <string name="Source"><![CDATA[-- Интерфейс: табло, баннеры, полоски сил/резонанса/удара, слоты способностей, подсказка, меню стилей.
@@ -12153,20 +12638,499 @@ function Hud.start()
 	end
 
 	RunService.RenderStepped:Connect(onRender)
-
-	-- При первом входе сразу предлагаем выбрать стиль.
-	if STYLES_ON then
-		task.delay(1.5, function()
-			setMenu(true)
-		end)
-	end
 end
 
 return Hud
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="50">
+        <Item class="ModuleScript" referent="52">
+          <Properties>
+            <string name="Name">Lobby</string>
+            <string name="Source"><![CDATA[-- Lobby screen: the player's character on a lit pedestal, and a bar at the bottom:
+--   [ FW | MF | DF | GK ]   [  PLAY  ]   [ STYLE: <name> ]
+-- STYLE opens a row of style cards. PLAY sends the role to the server, which puts the player in a team.
+-- In a match a small "LOBBY" button (top left) goes back.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Styles = require(Shared.Styles)
+local Controls = require(script.Parent.Controls)
+local State = require(script.Parent.State)
+
+local Lobby = {}
+
+local player = Players.LocalPlayer
+local ROLES = Config.Roles
+local INK = Color3.fromRGB(14, 15, 20)
+local PANEL = Color3.fromRGB(22, 24, 31)
+local WHITE = Color3.fromRGB(240, 242, 248)
+local MUTED = Color3.fromRGB(150, 156, 172)
+
+local gui: ScreenGui
+local bar: Frame
+local stylePanel: Frame
+local errorLabel: TextLabel
+local lobbyButton: TextButton
+local roleButtons = {}
+local styleButtonName: TextLabel
+local styleButtonStripe: Frame
+local selectedRole = ROLES.default
+local inLobby = nil :: boolean?
+local cameraConn: RBXScriptConnection? = nil
+
+local function make(className: string, props: { [string]: any }, parent: Instance?): any
+	local inst = Instance.new(className)
+	for k, v in pairs(props) do
+		(inst :: any)[k] = v
+	end
+	inst.Parent = parent
+	return inst
+end
+
+local function corner(parent: Instance, r: number)
+	make("UICorner", { CornerRadius = UDim.new(0, r) }, parent)
+end
+
+local function stroke(parent: Instance, color: Color3, t: number, transparency: number?)
+	return make("UIStroke", {
+		Color = color,
+		Thickness = t,
+		Transparency = transparency or 0,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	}, parent)
+end
+
+local function tween(inst: Instance, time: number, goal: { [string]: any })
+	TweenService:Create(inst, TweenInfo.new(time, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), goal):Play()
+end
+
+local function hover(button: GuiButton, scale: UIScale)
+	button.MouseEnter:Connect(function()
+		tween(scale, 0.18, { Scale = 1.05 })
+	end)
+	button.MouseLeave:Connect(function()
+		tween(scale, 0.18, { Scale = 1 })
+	end)
+end
+
+---------------------------------------------------------------------------
+-- Bar
+---------------------------------------------------------------------------
+
+local function refreshRoles()
+	for role, button in pairs(roleButtons) do
+		local on = role == selectedRole
+		tween(button, 0.15, {
+			BackgroundColor3 = on and WHITE or PANEL,
+			TextColor3 = on and INK or MUTED,
+		})
+	end
+end
+
+local function refreshStyle()
+	local style = Styles.get(player:GetAttribute("Style"))
+	styleButtonName.Text = string.upper(style.name)
+	styleButtonStripe.BackgroundColor3 = style.color
+end
+
+local function showError(message: string)
+	errorLabel.Text = message
+	errorLabel.TextTransparency = 0
+	task.delay(2.5, function()
+		if errorLabel.Text == message then
+			tween(errorLabel, 0.4, { TextTransparency = 1 })
+		end
+	end)
+end
+
+local function buildBar()
+	bar = make("Frame", {
+		Name = "Bar",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -28),
+		Size = UDim2.fromOffset(760, 86),
+		BackgroundTransparency = 1,
+	}, gui)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+		Padding = UDim.new(0, 14),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, bar)
+
+	-- Role selector
+	local roles = make("Frame", {
+		Name = "Roles",
+		LayoutOrder = 1,
+		Size = UDim2.fromOffset(236, 58),
+		BackgroundColor3 = INK,
+		BackgroundTransparency = 0.15,
+	}, bar)
+	corner(roles, 12)
+	stroke(roles, WHITE, 1, 0.85)
+	make("UIPadding", {
+		PaddingLeft = UDim.new(0, 5),
+		PaddingRight = UDim.new(0, 5),
+		PaddingTop = UDim.new(0, 5),
+		PaddingBottom = UDim.new(0, 5),
+	}, roles)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 4),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, roles)
+	for i, role in ipairs(ROLES.order) do
+		local button = make("TextButton", {
+			Name = role,
+			LayoutOrder = i,
+			Size = UDim2.new(0.25, -3, 1, 0),
+			BackgroundColor3 = PANEL,
+			AutoButtonColor = false,
+			Font = Enum.Font.GothamBlack,
+			TextSize = 18,
+			TextColor3 = MUTED,
+			Text = role,
+		}, roles)
+		corner(button, 8)
+		button.Activated:Connect(function()
+			selectedRole = role
+			refreshRoles()
+		end)
+		roleButtons[role] = button
+	end
+
+	-- PLAY
+	local play = make("TextButton", {
+		Name = "Play",
+		LayoutOrder = 2,
+		Size = UDim2.fromOffset(250, 72),
+		BackgroundColor3 = WHITE,
+		AutoButtonColor = false,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 34,
+		TextColor3 = INK,
+		Text = "PLAY",
+	}, bar)
+	corner(play, 14)
+	make("UIGradient", {
+		Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(200, 206, 222)),
+		Rotation = 90,
+	}, play)
+	local playScale = make("UIScale", {}, play)
+	hover(play, playScale)
+	play.Activated:Connect(function()
+		tween(playScale, 0.08, { Scale = 0.94 })
+		task.delay(0.08, function()
+			tween(playScale, 0.2, { Scale = 1 })
+		end)
+		State.send("Play", selectedRole)
+	end)
+
+	-- STYLE
+	local style = make("TextButton", {
+		Name = "Style",
+		LayoutOrder = 3,
+		Size = UDim2.fromOffset(236, 58),
+		BackgroundColor3 = INK,
+		BackgroundTransparency = 0.15,
+		AutoButtonColor = false,
+		Text = "",
+	}, bar)
+	corner(style, 12)
+	stroke(style, WHITE, 1, 0.85)
+	local styleScale = make("UIScale", {}, style)
+	hover(style, styleScale)
+	styleButtonStripe = make("Frame", {
+		Size = UDim2.new(0, 6, 1, -16),
+		Position = UDim2.fromOffset(10, 8),
+		BorderSizePixel = 0,
+	}, style)
+	corner(styleButtonStripe, 3)
+	make("TextLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(26, 8),
+		Size = UDim2.new(1, -36, 0, 16),
+		Font = Enum.Font.GothamBold,
+		TextSize = 13,
+		TextColor3 = MUTED,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "STYLE",
+	}, style)
+	styleButtonName = make("TextLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(26, 24),
+		Size = UDim2.new(1, -36, 0, 26),
+		Font = Enum.Font.GothamBlack,
+		TextSize = 20,
+		TextColor3 = WHITE,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+	}, style)
+	style.Activated:Connect(function()
+		stylePanel.Visible = not stylePanel.Visible
+	end)
+
+	errorLabel = make("TextLabel", {
+		Name = "Error",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -124),
+		Size = UDim2.fromOffset(500, 28),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		TextSize = 18,
+		TextColor3 = Color3.fromRGB(255, 120, 130),
+		TextStrokeTransparency = 0.5,
+		TextTransparency = 1,
+		Text = "",
+	}, gui)
+end
+
+---------------------------------------------------------------------------
+-- Style cards
+---------------------------------------------------------------------------
+
+local function buildStylePanel()
+	stylePanel = make("Frame", {
+		Name = "StylePanel",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -132),
+		Size = UDim2.fromOffset(760, 210),
+		BackgroundColor3 = INK,
+		BackgroundTransparency = 0.12,
+		Visible = false,
+	}, gui)
+	corner(stylePanel, 16)
+	stroke(stylePanel, WHITE, 1, 0.85)
+	make("TextLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(20, 12),
+		Size = UDim2.new(1, -40, 0, 22),
+		Font = Enum.Font.GothamBlack,
+		TextSize = 18,
+		TextColor3 = WHITE,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "CHOOSE YOUR STYLE",
+	}, stylePanel)
+	local list = make("ScrollingFrame", {
+		Position = UDim2.fromOffset(16, 44),
+		Size = UDim2.new(1, -32, 1, -58),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		ScrollingDirection = Enum.ScrollingDirection.X,
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(),
+	}, stylePanel)
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 12),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	}, list)
+
+	for i, style in ipairs(Styles.list) do
+		local card = make("TextButton", {
+			Name = style.id,
+			LayoutOrder = i,
+			Size = UDim2.fromOffset(170, 146),
+			BackgroundColor3 = PANEL,
+			AutoButtonColor = false,
+			Text = "",
+			ClipsDescendants = true,
+		}, list)
+		corner(card, 12)
+		local cardStroke = stroke(card, style.color2 or style.color, 2, 0.6)
+		-- colour panel with a soft gradient
+		local art = make("Frame", {
+			Size = UDim2.new(1, 0, 0, 92),
+			BackgroundColor3 = style.color,
+			BorderSizePixel = 0,
+		}, card)
+		make("UIGradient", {
+			Color = ColorSequence.new(style.color2 or style.color, style.color),
+			Rotation = 120,
+		}, art)
+		make("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(1, 1),
+			Font = Enum.Font.GothamBlack,
+			TextSize = 46,
+			TextColor3 = Color3.new(1, 1, 1),
+			TextTransparency = 0.65,
+			Text = string.upper(string.sub(style.name, 1, 1)),
+		}, art)
+		make("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(12, 98),
+			Size = UDim2.new(1, -24, 0, 22),
+			Font = Enum.Font.GothamBlack,
+			TextSize = 17,
+			TextColor3 = WHITE,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Text = string.upper(style.name),
+		}, card)
+		make("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(12, 120),
+			Size = UDim2.new(1, -24, 0, 16),
+			Font = Enum.Font.GothamMedium,
+			TextSize = 12,
+			TextColor3 = MUTED,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Text = #style.abilities > 0 and (#style.abilities .. " ABILITIES") or "ABILITIES SOON",
+		}, card)
+		local cardScale = make("UIScale", {}, card)
+		hover(card, cardScale)
+		card.Activated:Connect(function()
+			State.send("LobbyStyle", style.id)
+			stylePanel.Visible = false
+		end)
+		player:GetAttributeChangedSignal("Style"):Connect(function()
+			cardStroke.Transparency = player:GetAttribute("Style") == style.id and 0 or 0.6
+		end)
+		cardStroke.Transparency = player:GetAttribute("Style") == style.id and 0 or 0.6
+	end
+end
+
+---------------------------------------------------------------------------
+-- Camera and switching between lobby and match
+---------------------------------------------------------------------------
+
+local function lobbyCamera()
+	local camera = Workspace.CurrentCamera
+	camera.CameraType = Enum.CameraType.Scriptable
+	local start = os.clock()
+	if cameraConn then
+		cameraConn:Disconnect()
+	end
+	cameraConn = RunService.RenderStepped:Connect(function()
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not root then
+			return
+		end
+		local t = os.clock() - start
+		local focus = root.Position + Vector3.new(0, 0.6, 0)
+		local sway = Vector3.new(math.sin(t * 0.35) * 1.2, math.sin(t * 0.5) * 0.25, 0)
+		local eye = focus + root.CFrame.LookVector * 17 + root.CFrame.RightVector * -3.2 + Vector3.new(0, 2.4, 0) + sway
+		local target = CFrame.lookAt(eye, focus + Vector3.new(0, -0.8, 0) + root.CFrame.RightVector * -1.4)
+		camera.CFrame = camera.CFrame:Lerp(target, 0.12)
+		camera.FieldOfView = 50
+	end)
+end
+
+local function matchCamera()
+	if cameraConn then
+		cameraConn:Disconnect()
+		cameraConn = nil
+	end
+	local camera = Workspace.CurrentCamera
+	camera.CameraType = Enum.CameraType.Custom
+	camera.FieldOfView = 70
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		camera.CameraSubject = humanoid
+	end
+end
+
+local function setOtherGuis(visible: boolean)
+	local playerGui = player:FindFirstChild("PlayerGui")
+	if not playerGui then
+		return
+	end
+	for _, name in ipairs({ "ResonanceHud", "Cinematics", "BallMarker", "FxOverlay" }) do
+		local other = playerGui:FindFirstChild(name)
+		if other and other:IsA("ScreenGui") then
+			other.Enabled = visible
+		end
+	end
+end
+
+local function apply()
+	local lobby = player:GetAttribute("InMatch") ~= true
+	if lobby == inLobby then
+		return
+	end
+	inLobby = lobby
+	bar.Visible = lobby
+	stylePanel.Visible = false
+	lobbyButton.Visible = not lobby
+	Controls.menuOpen = lobby -- no kicking from the lobby
+	setOtherGuis(not lobby)
+	if lobby then
+		lobbyCamera()
+	else
+		matchCamera()
+	end
+end
+
+function Lobby.start()
+	gui = make("ScreenGui", {
+		Name = "Lobby",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 20,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	}, player:WaitForChild("PlayerGui"))
+	buildBar()
+	buildStylePanel()
+	refreshRoles()
+	refreshStyle()
+
+	lobbyButton = make("TextButton", {
+		Name = "ToLobby",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -16, 0, 12),
+		Size = UDim2.fromOffset(92, 32),
+		BackgroundColor3 = INK,
+		BackgroundTransparency = 0.25,
+		AutoButtonColor = false,
+		Font = Enum.Font.GothamBlack,
+		TextSize = 14,
+		TextColor3 = WHITE,
+		Text = "LOBBY",
+		Visible = false,
+	}, gui)
+	corner(lobbyButton, 8)
+	lobbyButton.Activated:Connect(function()
+		State.send("ToLobby")
+	end)
+
+	player:GetAttributeChangedSignal("Style"):Connect(refreshStyle)
+	player:GetAttributeChangedSignal("InMatch"):Connect(apply)
+	player:GetAttributeChangedSignal("LobbyError"):Connect(function()
+		local message = tostring(player:GetAttribute("LobbyError") or "")
+		showError((string.split(message, "#"))[1])
+	end)
+	player.CharacterAdded:Connect(function()
+		-- a new character after PLAY / LOBBY: point the camera again
+		task.defer(function()
+			inLobby = nil
+			apply()
+		end)
+	end)
+	apply()
+	-- other screens are created after this one; hide them once they exist
+	task.delay(1, function()
+		if inLobby then
+			setOtherGuis(false)
+		end
+	end)
+end
+
+return Lobby
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="53">
           <Properties>
             <string name="Name">Locomotion</string>
             <string name="Source"><![CDATA[-- Run and idle for every R6 character on the pitch (players and goalkeepers), on this client.
@@ -12254,7 +13218,7 @@ return Locomotion
 ]]></string>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="51">
+        <Item class="LocalScript" referent="54">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[-- Точка входа клиента.
@@ -12271,6 +13235,7 @@ local Controls = require(Client.Controls)
 local Hud = require(Client.Hud)
 local Cinematics = require(Client.Cinematics)
 local Locomotion = require(Client.Locomotion)
+local Lobby = require(Client.Lobby)
 
 -- Рюкзак и полоска здоровья в футболе не нужны.
 for _, coreGui in ipairs({ Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health, Enum.CoreGuiType.EmotesMenu }) do
@@ -12287,10 +13252,11 @@ Controls.start()
 Hud.start()
 Cinematics.start()
 Locomotion.start()
+Lobby.start()
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="52">
+        <Item class="ModuleScript" referent="55">
           <Properties>
             <string name="Name">ProcAnimator</string>
             <string name="Source"><![CDATA[-- Проигрывает анимации из Shared/Animations на персонажах R6 и R15.
@@ -12601,7 +13567,7 @@ return ProcAnimator
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="53">
+        <Item class="ModuleScript" referent="56">
           <Properties>
             <string name="Name">Sfx</string>
             <string name="Source"><![CDATA[-- Звуки. Список и громкость — в Config.Sounds.
@@ -12658,7 +13624,7 @@ return Sfx
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="54">
+        <Item class="ModuleScript" referent="57">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[-- Короткие функции «что сейчас с моим игроком и матчем». Используются всеми клиентскими модулями.
@@ -12750,13 +13716,13 @@ return State
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="55">
+  <Item class="Workspace" referent="58">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="NeedsPivotMigration">false</bool>
       <bool name="StreamingEnabled">false</bool>
     </Properties>
-    <Item class="Model" referent="56">
+    <Item class="Model" referent="59">
       <Properties>
         <string name="Name">StadiumMesh</string>
         <BinaryString name="AttributesSerialize">AQAAAA4AAABSQlhfUmVpbXBvcnRJZAIkAAAAYmQ2ZDQ1OGMtZTIyMC00ZGRmLWEwNGEtZTAxZWUyODJkZjU2</BinaryString>
@@ -12813,7 +13779,7 @@ return State
           </CFrame>
         </OptionalCoordinateFrame>
       </Properties>
-      <Item class="Model" referent="57">
+      <Item class="Model" referent="60">
         <Properties>
           <string name="Name">Sector_1</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -12870,7 +13836,7 @@ return State
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Model" referent="58">
+        <Item class="Model" referent="61">
           <Properties>
             <string name="Name">ads_1_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -12927,7 +13893,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="59">
+          <Item class="MeshPart" referent="62">
             <Properties>
               <string name="Name">ads_1</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -13069,7 +14035,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="60">
+            <Item class="SurfaceAppearance" referent="63">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -13116,7 +14082,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="61">
+        <Item class="Model" referent="64">
           <Properties>
             <string name="Name">concrete_1_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -13173,7 +14139,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="62">
+          <Item class="MeshPart" referent="65">
             <Properties>
               <string name="Name">concrete_1</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -13315,7 +14281,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="63">
+            <Item class="SurfaceAppearance" referent="66">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -13362,7 +14328,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="64">
+        <Item class="Model" referent="67">
           <Properties>
             <string name="Name">crowd_1_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -13419,7 +14385,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="65">
+          <Item class="MeshPart" referent="68">
             <Properties>
               <string name="Name">crowd_1</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -13561,7 +14527,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="66">
+            <Item class="SurfaceAppearance" referent="69">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -13608,7 +14574,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="67">
+        <Item class="Model" referent="70">
           <Properties>
             <string name="Name">dark_1_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -13665,7 +14631,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="68">
+          <Item class="MeshPart" referent="71">
             <Properties>
               <string name="Name">dark_1</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -13807,7 +14773,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="69">
+            <Item class="SurfaceAppearance" referent="72">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -13854,7 +14820,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="70">
+        <Item class="Model" referent="73">
           <Properties>
             <string name="Name">metal_1_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -13911,7 +14877,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="71">
+          <Item class="MeshPart" referent="74">
             <Properties>
               <string name="Name">metal_1</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -14053,7 +15019,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="72">
+            <Item class="SurfaceAppearance" referent="75">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -14100,7 +15066,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="73">
+        <Item class="Model" referent="76">
           <Properties>
             <string name="Name">neon_white_1_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -14157,7 +15123,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="74">
+          <Item class="MeshPart" referent="77">
             <Properties>
               <string name="Name">neon_white_1</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -14301,7 +15267,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="Model" referent="75">
+        <Item class="Model" referent="78">
           <Properties>
             <string name="Name">roof_1_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -14358,7 +15324,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="76">
+          <Item class="MeshPart" referent="79">
             <Properties>
               <string name="Name">roof_1</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -14500,7 +15466,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="77">
+            <Item class="SurfaceAppearance" referent="80">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -14548,7 +15514,7 @@ return State
           </Item>
         </Item>
       </Item>
-      <Item class="Model" referent="78">
+      <Item class="Model" referent="81">
         <Properties>
           <string name="Name">Sector_0</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -14605,7 +15571,7 @@ return State
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Model" referent="79">
+        <Item class="Model" referent="82">
           <Properties>
             <string name="Name">ads_0_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -14662,7 +15628,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="80">
+          <Item class="MeshPart" referent="83">
             <Properties>
               <string name="Name">ads_0</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -14804,7 +15770,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="81">
+            <Item class="SurfaceAppearance" referent="84">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -14851,7 +15817,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="82">
+        <Item class="Model" referent="85">
           <Properties>
             <string name="Name">concrete_0_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -14908,7 +15874,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="83">
+          <Item class="MeshPart" referent="86">
             <Properties>
               <string name="Name">concrete_0</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -15050,7 +16016,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="84">
+            <Item class="SurfaceAppearance" referent="87">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -15097,7 +16063,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="85">
+        <Item class="Model" referent="88">
           <Properties>
             <string name="Name">crowd_0_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -15154,7 +16120,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="86">
+          <Item class="MeshPart" referent="89">
             <Properties>
               <string name="Name">crowd_0</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -15296,7 +16262,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="87">
+            <Item class="SurfaceAppearance" referent="90">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -15343,7 +16309,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="88">
+        <Item class="Model" referent="91">
           <Properties>
             <string name="Name">metal_0_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -15400,7 +16366,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="89">
+          <Item class="MeshPart" referent="92">
             <Properties>
               <string name="Name">metal_0</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -15542,7 +16508,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="90">
+            <Item class="SurfaceAppearance" referent="93">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -15589,7 +16555,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="91">
+        <Item class="Model" referent="94">
           <Properties>
             <string name="Name">neon_white_0_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -15646,7 +16612,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="92">
+          <Item class="MeshPart" referent="95">
             <Properties>
               <string name="Name">neon_white_0</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -15790,7 +16756,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="Model" referent="93">
+        <Item class="Model" referent="96">
           <Properties>
             <string name="Name">roof_0_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -15847,7 +16813,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="94">
+          <Item class="MeshPart" referent="97">
             <Properties>
               <string name="Name">roof_0</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -15989,7 +16955,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="95">
+            <Item class="SurfaceAppearance" referent="98">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -16037,7 +17003,7 @@ return State
           </Item>
         </Item>
       </Item>
-      <Item class="Model" referent="96">
+      <Item class="Model" referent="99">
         <Properties>
           <string name="Name">Sector_2</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -16094,7 +17060,7 @@ return State
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Model" referent="97">
+        <Item class="Model" referent="100">
           <Properties>
             <string name="Name">ads_2_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -16151,7 +17117,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="98">
+          <Item class="MeshPart" referent="101">
             <Properties>
               <string name="Name">ads_2</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -16293,7 +17259,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="99">
+            <Item class="SurfaceAppearance" referent="102">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -16340,7 +17306,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="100">
+        <Item class="Model" referent="103">
           <Properties>
             <string name="Name">concrete_2_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -16397,7 +17363,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="101">
+          <Item class="MeshPart" referent="104">
             <Properties>
               <string name="Name">concrete_2</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -16539,7 +17505,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="102">
+            <Item class="SurfaceAppearance" referent="105">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -16586,7 +17552,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="103">
+        <Item class="Model" referent="106">
           <Properties>
             <string name="Name">crowd_2_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -16643,7 +17609,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="104">
+          <Item class="MeshPart" referent="107">
             <Properties>
               <string name="Name">crowd_2</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -16785,7 +17751,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="105">
+            <Item class="SurfaceAppearance" referent="108">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -16832,7 +17798,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="106">
+        <Item class="Model" referent="109">
           <Properties>
             <string name="Name">metal_2_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -16889,7 +17855,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="107">
+          <Item class="MeshPart" referent="110">
             <Properties>
               <string name="Name">metal_2</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -17031,7 +17997,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="108">
+            <Item class="SurfaceAppearance" referent="111">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -17078,7 +18044,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="109">
+        <Item class="Model" referent="112">
           <Properties>
             <string name="Name">neon_white_2_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -17135,7 +18101,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="110">
+          <Item class="MeshPart" referent="113">
             <Properties>
               <string name="Name">neon_white_2</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -17279,7 +18245,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="Model" referent="111">
+        <Item class="Model" referent="114">
           <Properties>
             <string name="Name">roof_2_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -17336,7 +18302,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="112">
+          <Item class="MeshPart" referent="115">
             <Properties>
               <string name="Name">roof_2</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -17478,7 +18444,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="113">
+            <Item class="SurfaceAppearance" referent="116">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -17526,7 +18492,7 @@ return State
           </Item>
         </Item>
       </Item>
-      <Item class="Model" referent="114">
+      <Item class="Model" referent="117">
         <Properties>
           <string name="Name">Sector_3</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -17583,7 +18549,7 @@ return State
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Model" referent="115">
+        <Item class="Model" referent="118">
           <Properties>
             <string name="Name">ads_3_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -17640,7 +18606,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="116">
+          <Item class="MeshPart" referent="119">
             <Properties>
               <string name="Name">ads_3</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -17782,7 +18748,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="117">
+            <Item class="SurfaceAppearance" referent="120">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -17829,7 +18795,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="118">
+        <Item class="Model" referent="121">
           <Properties>
             <string name="Name">concrete_3_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -17886,7 +18852,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="119">
+          <Item class="MeshPart" referent="122">
             <Properties>
               <string name="Name">concrete_3</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -18028,7 +18994,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="120">
+            <Item class="SurfaceAppearance" referent="123">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -18075,7 +19041,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="121">
+        <Item class="Model" referent="124">
           <Properties>
             <string name="Name">crowd_3_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -18132,7 +19098,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="122">
+          <Item class="MeshPart" referent="125">
             <Properties>
               <string name="Name">crowd_3</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -18274,7 +19240,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="123">
+            <Item class="SurfaceAppearance" referent="126">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -18321,7 +19287,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="124">
+        <Item class="Model" referent="127">
           <Properties>
             <string name="Name">metal_3_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -18378,7 +19344,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="125">
+          <Item class="MeshPart" referent="128">
             <Properties>
               <string name="Name">metal_3</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -18520,7 +19486,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="126">
+            <Item class="SurfaceAppearance" referent="129">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -18567,7 +19533,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="127">
+        <Item class="Model" referent="130">
           <Properties>
             <string name="Name">neon_white_3_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -18624,7 +19590,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="128">
+          <Item class="MeshPart" referent="131">
             <Properties>
               <string name="Name">neon_white_3</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -18768,7 +19734,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="Model" referent="129">
+        <Item class="Model" referent="132">
           <Properties>
             <string name="Name">roof_3_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -18825,7 +19791,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="130">
+          <Item class="MeshPart" referent="133">
             <Properties>
               <string name="Name">roof_3</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -18967,7 +19933,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="131">
+            <Item class="SurfaceAppearance" referent="134">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -19015,7 +19981,7 @@ return State
           </Item>
         </Item>
       </Item>
-      <Item class="Model" referent="132">
+      <Item class="Model" referent="135">
         <Properties>
           <string name="Name">Sector_5</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -19072,7 +20038,7 @@ return State
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Model" referent="133">
+        <Item class="Model" referent="136">
           <Properties>
             <string name="Name">ads_5_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -19129,7 +20095,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="134">
+          <Item class="MeshPart" referent="137">
             <Properties>
               <string name="Name">ads_5</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -19271,7 +20237,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="135">
+            <Item class="SurfaceAppearance" referent="138">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -19318,7 +20284,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="136">
+        <Item class="Model" referent="139">
           <Properties>
             <string name="Name">concrete_5_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -19375,7 +20341,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="137">
+          <Item class="MeshPart" referent="140">
             <Properties>
               <string name="Name">concrete_5</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -19517,7 +20483,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="138">
+            <Item class="SurfaceAppearance" referent="141">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -19564,7 +20530,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="139">
+        <Item class="Model" referent="142">
           <Properties>
             <string name="Name">crowd_5_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -19621,7 +20587,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="140">
+          <Item class="MeshPart" referent="143">
             <Properties>
               <string name="Name">crowd_5</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -19763,7 +20729,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="141">
+            <Item class="SurfaceAppearance" referent="144">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -19810,7 +20776,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="142">
+        <Item class="Model" referent="145">
           <Properties>
             <string name="Name">metal_5_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -19867,7 +20833,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="143">
+          <Item class="MeshPart" referent="146">
             <Properties>
               <string name="Name">metal_5</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -20009,7 +20975,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="144">
+            <Item class="SurfaceAppearance" referent="147">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -20056,7 +21022,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="145">
+        <Item class="Model" referent="148">
           <Properties>
             <string name="Name">neon_white_5_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -20113,7 +21079,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="146">
+          <Item class="MeshPart" referent="149">
             <Properties>
               <string name="Name">neon_white_5</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -20257,7 +21223,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="Model" referent="147">
+        <Item class="Model" referent="150">
           <Properties>
             <string name="Name">roof_5_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -20314,7 +21280,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="148">
+          <Item class="MeshPart" referent="151">
             <Properties>
               <string name="Name">roof_5</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -20456,7 +21422,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="149">
+            <Item class="SurfaceAppearance" referent="152">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -20504,7 +21470,7 @@ return State
           </Item>
         </Item>
       </Item>
-      <Item class="Model" referent="150">
+      <Item class="Model" referent="153">
         <Properties>
           <string name="Name">Sector_4</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -20561,7 +21527,7 @@ return State
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Model" referent="151">
+        <Item class="Model" referent="154">
           <Properties>
             <string name="Name">ads_4_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -20618,7 +21584,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="152">
+          <Item class="MeshPart" referent="155">
             <Properties>
               <string name="Name">ads_4</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -20760,7 +21726,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="153">
+            <Item class="SurfaceAppearance" referent="156">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -20807,7 +21773,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="154">
+        <Item class="Model" referent="157">
           <Properties>
             <string name="Name">concrete_4_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -20864,7 +21830,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="155">
+          <Item class="MeshPart" referent="158">
             <Properties>
               <string name="Name">concrete_4</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -21006,7 +21972,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="156">
+            <Item class="SurfaceAppearance" referent="159">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -21053,7 +22019,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="157">
+        <Item class="Model" referent="160">
           <Properties>
             <string name="Name">crowd_4_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -21110,7 +22076,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="158">
+          <Item class="MeshPart" referent="161">
             <Properties>
               <string name="Name">crowd_4</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -21252,7 +22218,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="159">
+            <Item class="SurfaceAppearance" referent="162">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -21299,7 +22265,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="160">
+        <Item class="Model" referent="163">
           <Properties>
             <string name="Name">metal_4_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -21356,7 +22322,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="161">
+          <Item class="MeshPart" referent="164">
             <Properties>
               <string name="Name">metal_4</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -21498,7 +22464,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="162">
+            <Item class="SurfaceAppearance" referent="165">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -21545,7 +22511,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="163">
+        <Item class="Model" referent="166">
           <Properties>
             <string name="Name">neon_white_4_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -21602,7 +22568,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="164">
+          <Item class="MeshPart" referent="167">
             <Properties>
               <string name="Name">neon_white_4</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -21746,7 +22712,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="Model" referent="165">
+        <Item class="Model" referent="168">
           <Properties>
             <string name="Name">roof_4_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -21803,7 +22769,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="166">
+          <Item class="MeshPart" referent="169">
             <Properties>
               <string name="Name">roof_4</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -21945,7 +22911,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="167">
+            <Item class="SurfaceAppearance" referent="170">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -21993,7 +22959,7 @@ return State
           </Item>
         </Item>
       </Item>
-      <Item class="Model" referent="168">
+      <Item class="Model" referent="171">
         <Properties>
           <string name="Name">Sector_6</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -22050,7 +23016,7 @@ return State
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Model" referent="169">
+        <Item class="Model" referent="172">
           <Properties>
             <string name="Name">ads_6_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -22107,7 +23073,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="170">
+          <Item class="MeshPart" referent="173">
             <Properties>
               <string name="Name">ads_6</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -22249,7 +23215,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="171">
+            <Item class="SurfaceAppearance" referent="174">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -22296,7 +23262,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="172">
+        <Item class="Model" referent="175">
           <Properties>
             <string name="Name">concrete_6_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -22353,7 +23319,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="173">
+          <Item class="MeshPart" referent="176">
             <Properties>
               <string name="Name">concrete_6</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -22495,7 +23461,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="174">
+            <Item class="SurfaceAppearance" referent="177">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -22542,7 +23508,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="175">
+        <Item class="Model" referent="178">
           <Properties>
             <string name="Name">crowd_6_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -22599,7 +23565,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="176">
+          <Item class="MeshPart" referent="179">
             <Properties>
               <string name="Name">crowd_6</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -22741,7 +23707,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="177">
+            <Item class="SurfaceAppearance" referent="180">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -22788,7 +23754,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="178">
+        <Item class="Model" referent="181">
           <Properties>
             <string name="Name">metal_6_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -22845,7 +23811,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="179">
+          <Item class="MeshPart" referent="182">
             <Properties>
               <string name="Name">metal_6</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -22987,7 +23953,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="180">
+            <Item class="SurfaceAppearance" referent="183">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -23034,7 +24000,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="181">
+        <Item class="Model" referent="184">
           <Properties>
             <string name="Name">neon_white_6_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -23091,7 +24057,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="182">
+          <Item class="MeshPart" referent="185">
             <Properties>
               <string name="Name">neon_white_6</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -23235,7 +24201,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="Model" referent="183">
+        <Item class="Model" referent="186">
           <Properties>
             <string name="Name">roof_6_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -23292,7 +24258,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="184">
+          <Item class="MeshPart" referent="187">
             <Properties>
               <string name="Name">roof_6</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -23434,7 +24400,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="185">
+            <Item class="SurfaceAppearance" referent="188">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -23482,7 +24448,7 @@ return State
           </Item>
         </Item>
       </Item>
-      <Item class="Model" referent="186">
+      <Item class="Model" referent="189">
         <Properties>
           <string name="Name">Sector_7</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -23539,7 +24505,7 @@ return State
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Model" referent="187">
+        <Item class="Model" referent="190">
           <Properties>
             <string name="Name">ads_7_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -23596,7 +24562,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="188">
+          <Item class="MeshPart" referent="191">
             <Properties>
               <string name="Name">ads_7</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -23738,7 +24704,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="189">
+            <Item class="SurfaceAppearance" referent="192">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -23785,7 +24751,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="190">
+        <Item class="Model" referent="193">
           <Properties>
             <string name="Name">concrete_7_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -23842,7 +24808,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="191">
+          <Item class="MeshPart" referent="194">
             <Properties>
               <string name="Name">concrete_7</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -23984,7 +24950,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="192">
+            <Item class="SurfaceAppearance" referent="195">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -24031,7 +24997,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="193">
+        <Item class="Model" referent="196">
           <Properties>
             <string name="Name">crowd_7_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -24088,7 +25054,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="194">
+          <Item class="MeshPart" referent="197">
             <Properties>
               <string name="Name">crowd_7</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -24230,7 +25196,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="195">
+            <Item class="SurfaceAppearance" referent="198">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -24277,7 +25243,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="196">
+        <Item class="Model" referent="199">
           <Properties>
             <string name="Name">metal_7_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -24334,7 +25300,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="197">
+          <Item class="MeshPart" referent="200">
             <Properties>
               <string name="Name">metal_7</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -24476,7 +25442,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="198">
+            <Item class="SurfaceAppearance" referent="201">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>
@@ -24523,7 +25489,7 @@ return State
             </Item>
           </Item>
         </Item>
-        <Item class="Model" referent="199">
+        <Item class="Model" referent="202">
           <Properties>
             <string name="Name">neon_white_7_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -24580,7 +25546,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="200">
+          <Item class="MeshPart" referent="203">
             <Properties>
               <string name="Name">neon_white_7</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -24724,7 +25690,7 @@ return State
             </Properties>
           </Item>
         </Item>
-        <Item class="Model" referent="201">
+        <Item class="Model" referent="204">
           <Properties>
             <string name="Name">roof_7_Node</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -24781,7 +25747,7 @@ return State
               </CFrame>
             </OptionalCoordinateFrame>
           </Properties>
-          <Item class="MeshPart" referent="202">
+          <Item class="MeshPart" referent="205">
             <Properties>
               <string name="Name">roof_7</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -24923,7 +25889,7 @@ return State
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="SurfaceAppearance" referent="203">
+            <Item class="SurfaceAppearance" referent="206">
               <Properties>
                 <string name="Name">SurfaceAppearance</string>
                 <token name="AlphaMode">0</token>

@@ -13,6 +13,7 @@ local Actors = require(script.Parent.Actors)
 local Ball = require(script.Parent.BallService)
 local Match = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
+local PlayerService = require(script.Parent.PlayerService)
 
 local SHOT, PASS, LOB = Config.Shot, Config.Pass, Config.Lob
 local TACKLE, DASH, DRIBBLE, RES = Config.Tackle, Config.Dash, Config.Dribble, Config.Resonance
@@ -451,6 +452,20 @@ end
 function Actions.init()
 	Net.Action.OnServerEvent:Connect(function(player: Player, name: any, ...)
 		if type(name) ~= "string" or not allow(player) then
+			return
+		end
+		-- Lobby requests come from players who are not on the pitch yet.
+		if name == "Play" then
+			local problem = PlayerService.requestPlay(player, ...)
+			if problem then
+				player:SetAttribute("LobbyError", problem .. "#" .. os.clock())
+			end
+			return
+		elseif name == "ToLobby" then
+			PlayerService.toLobby(player)
+			return
+		elseif name == "LobbyStyle" then
+			PlayerService.lobbyStyle(player, ...)
 			return
 		end
 		local handler = handlers[name]

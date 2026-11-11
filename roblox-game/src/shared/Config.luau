@@ -21,6 +21,23 @@ Config.Avatar = {
 	ForceRig = true, -- если Roblox выдал аватар другого типа, сервер пересоберёт персонажа в нужный
 }
 
+-- Roles picked in the lobby. Slots: where players of that role line up at kick-off, as fractions of the
+-- half length (from their own goal line) and of the half width (from the middle).
+Config.Roles = {
+	order = { "FW", "MF", "DF", "GK" },
+	FW = { name = "FORWARD", slots = { { 0.86, 0 }, { 0.8, -0.36 }, { 0.8, 0.36 } } },
+	MF = { name = "MIDFIELDER", slots = { { 0.6, 0 }, { 0.58, -0.46 }, { 0.58, 0.46 }, { 0.5, -0.2 }, { 0.5, 0.2 } } },
+	DF = { name = "DEFENDER", slots = { { 0.3, 0 }, { 0.3, -0.4 }, { 0.3, 0.4 }, { 0.22, -0.2 }, { 0.22, 0.2 } } },
+	GK = { name = "GOALKEEPER", slots = {} }, -- one per team; replaces that team's bot keeper
+	default = "MF",
+}
+
+-- The lobby: a closed room high above the stadium where players wait before pressing PLAY.
+Config.Lobby = {
+	Origin = Vector3.new(0, 700, 0),
+	PedestalSpacing = 9,
+}
+
 Config.Match = {
 	Duration = 300, -- длина матча, секунды
 	KickoffCountdown = 3, -- отсчёт перед розыгрышем

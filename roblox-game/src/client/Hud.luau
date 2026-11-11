@@ -1008,13 +1008,6 @@ function Hud.start()
 	end
 
 	RunService.RenderStepped:Connect(onRender)
-
-	-- При первом входе сразу предлагаем выбрать стиль.
-	if STYLES_ON then
-		task.delay(1.5, function()
-			setMenu(true)
-		end)
-	end
 end
 
 return Hud

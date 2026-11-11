@@ -82,13 +82,44 @@ local function ballSpot(): Vector3
 	return F.Origin + Vector3.new(0, Config.Ball.Radius + 0.05, 0)
 end
 
+local ROLES = Config.Roles
+local ROLE_RANK = { FW = 1, MF = 2, DF = 3 }
+
+-- Players on the pitch (in the lobby does not count).
+local function playersInMatch(): number
+	local count = 0
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player:GetAttribute("InMatch") then
+			count += 1
+		end
+	end
+	return count
+end
+
+-- Number of this actor among same-role teammates (1, 2, ...), by name.
+local function roleIndex(actor): number
+	local index = 1
+	for _, other in ipairs(Actors.teamList(actor.team, false)) do
+		if other ~= actor and other.role == actor.role and actorName(other) < actorName(actor) then
+			index += 1
+		end
+	end
+	return index
+end
+
 -- Поставить актёра на позицию. index — номер в команде, isKicker — разыгрывает мяч с центра.
+-- Players with a role (FW/MF/DF) line up in that role's slots; GK goes in goal.
 function Match.place(actor, index: number, isKicker: boolean)
 	local position
+	local role = actor.role and ROLES[actor.role]
 	if actor.isKeeper then
 		position = F.fromOwnGoal(actor.side, 5, 0)
 	elseif isKicker then
 		position = F.fromOwnGoal(actor.side, F.HalfLength - 3.4, 0)
+	elseif role and #role.slots > 0 then
+		local slots = role.slots
+		local slot = slots[((roleIndex(actor) - 1) % #slots) + 1]
+		position = F.fromOwnGoal(actor.side, slot[1] * F.HalfLength, slot[2] * F.HalfWidth)
 	else
 		local slot = SLOTS[((index - 1) % #SLOTS) + 1]
 		position = F.fromOwnGoal(actor.side, slot[1] * F.HalfLength, slot[2] * F.HalfWidth)
@@ -105,7 +136,12 @@ end
 
 local function sortedTeam(team: string)
 	local list = Actors.teamList(team, false)
+	-- forwards first: the first player of the kicking team takes the kick-off
 	table.sort(list, function(a, b)
+		local ra, rb = ROLE_RANK[a.role] or 2, ROLE_RANK[b.role] or 2
+		if ra ~= rb then
+			return ra < rb
+		end
 		return actorName(a) < actorName(b)
 	end)
 	return list
@@ -164,7 +200,7 @@ local function playUntilStop()
 		if pendingGoal then
 			return pendingGoal
 		end
-		if #Players:GetPlayers() == 0 then
+		if playersInMatch() == 0 then
 			return "empty"
 		end
 		Match.timeLeft = math.max(0, Match.timeLeft - dt)
@@ -222,7 +258,7 @@ local function runForever()
 		Match.score.Home, Match.score.Away = 0, 0
 		Match.timeLeft = MATCH.Duration
 		replicate()
-		while #Players:GetPlayers() == 0 do
+		while playersInMatch() == 0 do
 			task.wait(0.5)
 		end
 		task.wait(1.5) -- дать персонажу загрузиться
