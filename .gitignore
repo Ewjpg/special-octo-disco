@@ -3,3 +3,5 @@ book/model.json
 __pycache__/
 roblox-game/build/stadium/serve/
 roblox-game/build/stadium/textures/_sheet.png
+*.rbxlx.lock
+*.rbxl.lock
