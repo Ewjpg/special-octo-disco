@@ -15,15 +15,15 @@ FieldSpec.EndMargin = 24
 FieldSpec.SideMargin = 16
 FieldSpec.WallHeight = 80
 
-FieldSpec.GoalWidth = 40
-FieldSpec.GoalHeight = 14
-FieldSpec.GoalDepth = 10
-FieldSpec.PostRadius = 0.6
+FieldSpec.GoalWidth = 60
+FieldSpec.GoalHeight = 22
+FieldSpec.GoalDepth = 14
+FieldSpec.PostRadius = 0.9
 
 FieldSpec.PenaltyDepth = 100
 FieldSpec.PenaltyWidth = 210
 FieldSpec.GoalAreaDepth = 36
-FieldSpec.GoalAreaWidth = 108
+FieldSpec.GoalAreaWidth = 124
 FieldSpec.PenaltySpot = 66
 FieldSpec.PenaltyArc = 45
 FieldSpec.CenterRadius = 55

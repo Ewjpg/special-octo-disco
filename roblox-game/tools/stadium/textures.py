@@ -77,8 +77,8 @@ def rgb(*c) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def concrete(outdir: Path):
-    """Weathered grey-blue concrete with form-work panel lines and soft stains."""
-    base = rgb(132, 137, 146)
+    """Dark blue-grey concrete with form-work panel lines and soft stains (neon reads well on it)."""
+    base = rgb(62, 68, 86)
     grain = fbm(N, 16, 5, 1)
     stains = fbm(N, 4, 3, 2)
     shade = (grain - 0.5) * 22 + (stains - 0.5) * 30
@@ -95,8 +95,8 @@ def concrete(outdir: Path):
 
 
 def metal(outdir: Path):
-    """Muted navy painted steel: brushed grain, panel seams, rivets."""
-    base = rgb(58, 68, 92)
+    """Dark navy painted steel: brushed grain, panel seams, rivets."""
+    base = rgb(30, 36, 56)
     y, x = np.mgrid[0:N, 0:N]
     brushed = value_noise(N, 512, 3)[:, :]  # fine streaks
     brushed = np.asarray(Image.fromarray((brushed * 255).astype(np.uint8)).resize((N, 8)).resize((N, N)), np.float32) / 255.0
@@ -114,7 +114,7 @@ def metal(outdir: Path):
 
 def roof(outdir: Path):
     """Roof cladding: pale grey-blue panels in a grid with darker seams and gentle streaks."""
-    base = rgb(176, 182, 194)
+    base = rgb(70, 78, 100)
     y, x = np.mgrid[0:N, 0:N]
     streak = fbm(N, 6, 4, 5)
     color = base[None, None, :] + ((streak - 0.5) * 18)[:, :, None]
@@ -122,7 +122,7 @@ def roof(outdir: Path):
     panel = ((x // 256) + (y // 256)) % 2 == 1
     color[panel] = color[panel] * 0.93 + rgb(150, 168, 196) * 0.07
     seams = ((x % 256) < 4) | ((y % 256) < 4)
-    color[seams] = rgb(84, 92, 110)
+    color[seams] = rgb(30, 34, 48)
     height = -seams.astype(np.float32) * 0.7 + streak * 0.1
     rough = np.where(panel, 0.35, 0.55).astype(np.float32) + (streak - 0.5) * 0.1
     metalness = np.where(seams, 0.8, 0.25).astype(np.float32)
@@ -130,91 +130,75 @@ def roof(outdir: Path):
 
 
 def crowd(outdir: Path):
-    """A packed crowd, four seat rows per image (one 256 px band per row).
+    """Hologram crowd: faceless standing silhouettes, all in ONE solid colour, on dark seats.
 
-    Within a band the top 55 % is the seat tread and the bottom 45 % the riser below it;
-    the people sit on the tread and overlap the riser, which is what you see from the pitch.
-    Each image also carries an aisle (stairs) at the left edge, so every repeat of the
-    texture along a stand has one.
+    Four seat rows per image (one 256 px band each). The figures stand on the tread and rise over the
+    riser above it, which is what you see from the pitch. Every image starts with an aisle at the left
+    edge, so every repeat along a stand has one.
     """
+    holo = rgb(112, 168, 255)  # the single crowd colour
+    seats = rgb(13, 15, 26)
+    riser = rgb(20, 23, 36)
     color = np.zeros((N, N, 3), np.float32)
-    height = np.zeros((N, N), np.float32)
     y, x = np.mgrid[0:N, 0:N]
-
-    seat_color = rgb(44, 52, 70)
-    riser_color = rgb(96, 100, 110)
-    band = y // 256
     in_band = y % 256
-    color[:] = seat_color
-    color[in_band > 150] = riser_color
+    color[:] = seats
+    color[in_band > 150] = riser
+    mask = np.zeros((N, N), bool)
 
-    # Muted shirts: home blue, away red, plus neutrals.
-    shirts = [
-        (rgb(74, 98, 150), 30),
-        (rgb(58, 78, 124), 14),
-        (rgb(150, 72, 78), 18),
-        (rgb(122, 60, 66), 8),
-        (rgb(196, 198, 204), 14),
-        (rgb(110, 114, 124), 10),
-        (rgb(42, 48, 66), 6),
-    ]
-    weights = np.array([w for _, w in shirts], np.float64)
-    weights /= weights.sum()
-    skins = [rgb(214, 182, 156), rgb(188, 146, 116), rgb(132, 96, 74), rgb(234, 206, 182), rgb(96, 70, 56)]
+    def rect(x0, y0, x1, y1):
+        mask[max(0, int(y0)) : max(0, int(y1)), max(0, int(x0)) : max(0, int(x1))] = True
 
-    aisle_w = 64  # px, left edge of every tile
-    person_w = 46
+    def disc(cx, cy, r):
+        ys, xs = slice(max(0, int(cy - r)), int(cy + r + 1)), slice(max(0, int(cx - r)), int(cx + r + 1))
+        yy, xx = np.mgrid[ys, xs]
+        mask[ys, xs] |= (xx - cx) ** 2 + (yy - cy) ** 2 <= r * r
+
+    aisle_w = 64
     for b in range(4):
         top = b * 256
-        cx = aisle_w + rng.integers(0, 12)
-        while cx < N - person_w // 2:
-            if rng.random() > 0.06:  # a few empty seats
-                shirt = shirts[rng.choice(len(shirts), p=weights)][0] * (0.9 + rng.random() * 0.2)
-                skin = skins[rng.integers(0, len(skins))]
-                w = person_w * (0.85 + rng.random() * 0.3)
-                body_top = top + 70 + rng.integers(-10, 14)
-                body_bottom = top + 200
-                hx = cx + rng.integers(-4, 5)
-                # torso: rounded box
-                bx = np.abs(x[top : top + 256, :] - hx) < w / 2
-                by = (y[top : top + 256, :] > body_top) & (y[top : top + 256, :] < body_bottom)
-                torso = bx & by
-                color[top : top + 256][torso] = shirt
-                height[top : top + 256][torso] = 0.6
-                # head
-                hr = w * 0.28
-                hy = body_top - hr * 0.9
-                head = (x[top : top + 256, :] - hx) ** 2 + (y[top : top + 256, :] - hy) ** 2 < hr**2
-                color[top : top + 256][head] = skin
-                height[top : top + 256][head] = 1.0
-                # hair cap on half the heads
-                if rng.random() < 0.6:
-                    hair = head & (y[top : top + 256, :] < hy - hr * 0.2)
-                    color[top : top + 256][hair] = rgb(40, 34, 30) * (0.7 + rng.random() * 0.6)
-                # raised arm sometimes
-                if rng.random() < 0.12:
-                    arm = (np.abs(x[top : top + 256, :] - (hx + w * 0.45)) < 6) & (y[top : top + 256, :] > body_top - 60) & (y[top : top + 256, :] < body_top + 10)
-                    color[top : top + 256][arm] = skin
-                    height[top : top + 256][arm] = 0.8
-            cx += int(person_w * (1.0 + rng.random() * 0.15))
+        cx = aisle_w + 14 + rng.integers(0, 10)
+        while cx < N - 22:
+            if rng.random() > 0.05:
+                s = 0.85 + rng.random() * 0.3  # body size
+                head_r = 11 * s
+                head_y = top + 40 + rng.integers(-8, 10)
+                shoulder_y = head_y + head_r + 6 * s
+                hip_y = shoulder_y + 70 * s
+                half = 17 * s
+                disc(cx, head_y, head_r)
+                rect(cx - 5 * s, head_y + head_r - 2, cx + 5 * s, shoulder_y + 2)  # neck
+                # torso narrowing a little towards the hips
+                for row in range(int(shoulder_y), int(hip_y)):
+                    t = (row - shoulder_y) / max(1.0, hip_y - shoulder_y)
+                    w = half * (1.0 - 0.18 * t)
+                    rect(cx - w, row, cx + w + 1, row + 1)
+                # legs down to the band edge
+                rect(cx - half * 0.8, hip_y, cx - 2 * s, top + 254)
+                rect(cx + 2 * s, hip_y, cx + half * 0.8, top + 254)
+                arm_w = 7 * s
+                if rng.random() < 0.25:  # cheering: both arms up
+                    rect(cx - half - arm_w + 2, shoulder_y - 52 * s, cx - half + 2, shoulder_y + 10)
+                    rect(cx + half - 2, shoulder_y - 52 * s, cx + half + arm_w - 2, shoulder_y + 10)
+                elif rng.random() < 0.2:  # one arm up
+                    rect(cx + half - 2, shoulder_y - 52 * s, cx + half + arm_w - 2, shoulder_y + 10)
+                    rect(cx - half - arm_w + 3, shoulder_y + 2, cx - half + 3, hip_y)
+                else:  # arms down
+                    rect(cx - half - arm_w + 3, shoulder_y + 2, cx - half + 3, hip_y)
+                    rect(cx + half - 3, shoulder_y + 2, cx + half + arm_w - 3, hip_y)
+            cx += int(46 * (0.95 + rng.random() * 0.2))
 
-    # Aisle: concrete steps, light, with a dark nosing per band.
+    color[mask] = holo
+    # aisle: dark steps with a faint glowing nosing
     aisle = x < aisle_w
-    step_shade = np.where(in_band > 150, 118, 138).astype(np.float32)
-    color[aisle] = np.stack([step_shade, step_shade + 3, step_shade + 8], axis=2)[aisle]
-    nosing = aisle & ((in_band < 6) | ((in_band > 148) & (in_band < 154)))
-    color[nosing] = rgb(70, 74, 84)
-    rail = (np.abs(x - aisle_w // 2) < 2) & (in_band < 150)
-    color[rail] = rgb(150, 156, 168)
-    height[aisle] = 0.0
+    color[aisle] = np.where((in_band > 150)[:, :, None], rgb(26, 30, 44), rgb(34, 38, 54))[aisle]
+    nosing = aisle & ((in_band < 4) | ((in_band > 148) & (in_band < 152)))
+    color[nosing] = rgb(70, 110, 190)
+    mask[aisle] = False
 
-    # Overall gentle variation and a touch of atmospheric haze so it reads as distance.
-    var = fbm(N, 8, 3, 7)
-    color *= (0.92 + var * 0.16)[:, :, None]
-    color = color * 0.92 + rgb(120, 128, 142) * 0.08
-
-    rough = np.full((N, N), 0.9, np.float32)
-    save(outdir, "crowd", color, height * 0.5 + var * 0.05, rough, np.zeros((N, N), np.float32), 6.0)
+    height = mask.astype(np.float32) * 0.4
+    rough = np.where(mask, 0.35, 0.9).astype(np.float32)
+    save(outdir, "crowd", color, height, rough, np.zeros((N, N), np.float32), 2.0)
 
 
 def main() -> int:

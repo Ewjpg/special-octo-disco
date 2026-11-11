@@ -10,6 +10,15 @@ Config.Teams = {
 }
 
 -- Тип аватара. Анимации есть для обоих, основной — R6.
+-- Neon palette. Stadium mesh parts named neon_<colour>_N get Material Neon with these colours at runtime.
+Config.Neon = {
+	Line = Color3.fromRGB(120, 170, 255), -- pitch markings
+	Goal = Color3.fromRGB(170, 110, 255), -- goal frames
+	blue = Color3.fromRGB(60, 130, 255),
+	purple = Color3.fromRGB(150, 80, 255),
+	white = Color3.fromRGB(215, 230, 255), -- floodlight faces
+}
+
 Config.Avatar = {
 	RigType = "R6", -- "R6" или "R15"
 	ForceRig = true, -- если Roblox выдал аватар другого типа, сервер пересоберёт персонажа в нужный

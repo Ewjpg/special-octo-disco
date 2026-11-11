@@ -92,7 +92,11 @@ materials = {
     "crowd": pbr_material("crowd"),
     "metal": pbr_material("metal"),
     "roof": pbr_material("roof"),
-    "led": flat_material("led", (78, 112, 176), emission=3.0),
+    # Emissive "neon_*" materials. Roblox Import 3D does not turn emission into Neon by itself:
+    # the game does it at runtime for every part whose name starts with neon_<colour>.
+    "neon_blue": flat_material("neon_blue", (60, 130, 255), emission=6.0),
+    "neon_purple": flat_material("neon_purple", (150, 80, 255), emission=6.0),
+    "neon_white": flat_material("neon_white", (215, 230, 255), emission=10.0),
 }
 
 stadium = bpy.data.collections.new("Stadium")
@@ -101,6 +105,12 @@ context = bpy.data.collections.new("Context")
 scene.collection.children.link(context)
 
 chunks, info = geometry.build()
+# One empty per bowl sector: in Roblox each becomes a Model (Sector_0..7) of dockable pieces.
+sector_roots = {}
+for s_index in range(geometry.SECTORS):
+    e = bpy.data.objects.new(f"Sector_{s_index}", None)
+    stadium.objects.link(e)
+    sector_roots[s_index] = e
 for c in chunks:
     tris = c["tris"]
     uvs = c["uvs"]
@@ -118,6 +128,7 @@ for c in chunks:
     me.update()
     obj = bpy.data.objects.new(c["name"], me)
     stadium.objects.link(obj)
+    obj.parent = sector_roots[int(c["name"].rsplit("_", 1)[1])]
 
 print(f"[stadium] {len(chunks)} objects, {sum(len(c['tris']) for c in chunks)} triangles")
 
@@ -143,12 +154,14 @@ def box(name, size_r, center_r, mat):
     return o
 
 
-grass_a = flat_material("grass_a", (76, 116, 64), roughness=0.95)
-grass_b = flat_material("grass_b", (70, 108, 59), roughness=0.95)
-apron = flat_material("apron", (64, 98, 56), roughness=0.95)
-white = flat_material("line", (226, 228, 232), roughness=0.6)
-board_home = flat_material("board_home", (46, 84, 160), emission=1.2)
-board_away = flat_material("board_away", (150, 50, 60), emission=1.2)
+grass_a = flat_material("grass_a", (26, 70, 36), roughness=0.95)
+grass_b = flat_material("grass_b", (23, 63, 32), roughness=0.95)
+apron = flat_material("apron", (19, 52, 27), roughness=0.95)
+white = flat_material("line", (120, 170, 255), emission=4.0)
+goal_neon = flat_material("goal_neon", (170, 110, 255), emission=6.0)
+figure = flat_material("figure", (60, 64, 76), roughness=0.7)
+board_home = flat_material("board_home", (52, 120, 255), emission=3.0)
+board_away = flat_material("board_away", (240, 62, 72), emission=3.0)
 
 stripes = 19
 w = 2 * HL / stripes
@@ -162,8 +175,14 @@ for s in (-1, 1):
     for (sx, sz, cx, cz) in [(PD, 1, gx - s * PD / 2, -PW / 2), (PD, 1, gx - s * PD / 2, PW / 2), (1, PW, gx - s * PD, 0)]:
         box("line", (sx, 0.1, sz), (cx, 0.03, cz), white)
     for z in (-GW / 2, GW / 2):
-        box("post", (1.2, GH, 1.2), (gx, GH / 2, z), white)
-    box("bar", (1.2, 1.2, GW + 1), (gx, GH, 0), white)
+        box("post", (1.8, GH, 1.8), (gx, GH / 2, z), goal_neon)
+    box("bar", (1.8, 1.8, GW + 2), (gx, GH, 0), goal_neon)
+    # Player figures for scale (R6 proportions at Config.Player.Scale = 0.75: 3.75 studs tall).
+    for k, fz in enumerate((-12, 0, 9)):
+        fx = gx - s * (8 + 6 * k)
+        box("figure_legs", (1.5, 1.5, 0.75), (fx, 0.75, fz), figure)
+        box("figure_torso", (1.5, 1.5, 0.75), (fx, 2.25, fz), figure)
+        box("figure_head", (0.9, 0.75, 0.9), (fx, 3.4, fz), figure)
 for zs in (-1, 1):
     box("board", (ARENA_X, 4.5, 2), (-ARENA_X / 2, 2.25, zs * (ARENA_Z + 1)), board_home)
     box("board", (ARENA_X, 4.5, 2), (ARENA_X / 2, 2.25, zs * (ARENA_Z + 1)), board_away)
@@ -172,7 +191,7 @@ for s, mat in ((-1, board_home), (1, board_away)):
 
 # --- light and world ----------------------------------------------------------------
 sun_data = bpy.data.lights.new("Sun", type="SUN")
-sun_data.energy = 3.2
+sun_data.energy = 2.6
 sun_data.angle = math.radians(2.0)
 sun_data.color = (1.0, 0.97, 0.92)
 sun = bpy.data.objects.new("Sun", sun_data)
@@ -183,7 +202,7 @@ world = bpy.data.worlds.new("World")
 scene.world = world
 world.use_nodes = True
 bg = world.node_tree.nodes.get("Background")
-bg.inputs["Color"].default_value = (0.42, 0.50, 0.62, 1.0)  # muted, hazy sky
+bg.inputs["Color"].default_value = (0.30, 0.38, 0.55, 1.0)  # deeper sky so the neon reads
 bg.inputs["Strength"].default_value = 0.9
 
 # ---------------------------------------------------------------------------
@@ -215,8 +234,8 @@ if RENDER:
         scene.eevee.taa_render_samples = 48
     except AttributeError:
         pass
-    scene.view_settings.view_transform = "AgX"
-    scene.view_settings.look = "AgX - Base Contrast"
+    # Standard keeps saturated neon colours (AgX bleaches bright emission towards white).
+    scene.view_settings.view_transform = "Standard"
 
     views = [
         ("preview_broadcast", (0, 80, ARENA_Z + 120), (0, 10, -HW * 0.3), 22),
@@ -238,7 +257,7 @@ if GLB:
     bpy.ops.object.select_all(action="DESELECT")
     for o in stadium.objects:
         o.select_set(True)
-    bpy.context.view_layer.objects.active = stadium.objects[0]
+    bpy.context.view_layer.objects.active = sector_roots[0]
     bpy.ops.export_scene.gltf(
         filepath=str(OUT / "Stadium.glb"),
         export_format="GLB",

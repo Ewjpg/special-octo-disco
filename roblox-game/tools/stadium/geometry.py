@@ -163,6 +163,29 @@ class Builder:
             self._quad(material, sector, quad, False)
             self._quad(material, sector, quad, True)  # beams are thin: make them double sided
 
+    def prism(self, material: str, sector: int, center, inward, width: float, depth: float, y0: float, y1: float, tile: float = 16.0):
+        """Upright box at plan point center (x, z), its front facing `inward` (towards the pitch)."""
+        c = np.asarray(center, float)
+        f = np.asarray(inward, float)
+        f = f / np.linalg.norm(f)
+        t = np.array([-f[1], f[0]])
+        hw, hd = width / 2.0, depth / 2.0
+        corners = [c + f * hd - t * hw, c + f * hd + t * hw, c - f * hd + t * hw, c - f * hd - t * hw]
+
+        def v3(q, y):
+            return np.array([q[0], y, q[1]])
+
+        h = y1 - y0
+        sides = [(corners[k], corners[(k + 1) % 4]) for k in range(4)]
+        for q0, q1 in sides:
+            w = float(np.linalg.norm(q1 - q0))
+            quad = [(v3(q0, y0), (0, h / tile)), (v3(q1, y0), (w / tile, h / tile)), (v3(q1, y1), (w / tile, 0)), (v3(q0, y1), (0, 0))]
+            self._quad(material, sector, quad, False)
+            self._quad(material, sector, quad, True)
+        top = [(v3(corners[k], y1), (0, 0)) for k in range(4)]
+        self._quad(material, sector, top, False)
+        self._quad(material, sector, top, True)
+
     def chunks(self):
         out = []
         for material, sectors in self.data.items():
@@ -237,9 +260,11 @@ def build(seed: int = 7):
     b.strip("metal", (d + 4.0, 0.0), (d + 4.0, roof_y), CONCRETE_TILE, roof_y / CONCRETE_TILE, 0.0)
 
     # LED strips on the front wall and both fascias (a hair in front of the wall).
-    b.strip("led", (-0.06, FRONT_WALL - 1.0), (-0.06, FRONT_WALL - 0.5), 64.0, 0.6, 0.4, flip=True)
-    for _, fd, fy0, fy1 in profile_points:
-        b.strip("led", (fd - 0.06, fy1 - 1.6), (fd - 0.06, fy1 - 0.8), 64.0, 0.6, 0.4, flip=True)
+    b.strip("neon_blue", (-0.06, FRONT_WALL - 1.2), (-0.06, FRONT_WALL - 0.4), 64.0, 0.6, 0.4, flip=True)
+    for k, (_, fd, fy0, fy1) in enumerate(profile_points):
+        colour = "neon_purple" if k % 2 == 0 else "neon_blue"
+        b.strip(colour, (fd - 0.06, fy1 - 2.4), (fd - 0.06, fy1 - 0.8), 64.0, 0.6, 0.4, flip=True)
+    b.strip("neon_blue", (back_d - 0.06, roof_y - 5.0), (back_d - 0.06, roof_y - 3.6), 64.0, 0.6, 0.4, flip=True)
 
     # Ring roof: inner edge cantilevers over the lower tier, slab slopes down towards the back.
     inner_d = 64.0
@@ -249,7 +274,7 @@ def build(seed: int = 7):
     b.strip("roof", (inner_d, inner_y + thick), (outer_d, roof_y + thick), ROOF_TILE, 0.0, (outer_d - inner_d) / ROOF_TILE, flip=True)  # top
     b.strip("roof", (inner_d, inner_y), (outer_d, roof_y), ROOF_TILE, 0.0, (outer_d - inner_d) / ROOF_TILE)  # underside
     b.strip("metal", (inner_d, inner_y), (inner_d, inner_y + thick), CONCRETE_TILE, thick / CONCRETE_TILE, 0.0, flip=True)  # edge
-    b.strip("led", (inner_d - 0.06, inner_y + 0.4), (inner_d - 0.06, inner_y + 1.2), 64.0, 0.6, 0.4, flip=True)
+    b.strip("neon_purple", (inner_d - 0.06, inner_y + 0.4), (inner_d - 0.06, inner_y + 1.6), 64.0, 0.6, 0.4, flip=True)
 
     # Roof trusses: radial beams under the slab every few segments.
     step = 8
@@ -257,6 +282,24 @@ def build(seed: int = 7):
     for i in range(0, SEGMENTS, step):
         # Tops follow the underside of the sloping slab, a hair below it.
         b.box_between("metal", i * SECTORS // SEGMENTS, r_in[i], r_out[i], inner_y - 0.05, roof_y - 0.05, 4.0, 1.4, CONCRETE_TILE)
+
+    # Massive floodlight pylons standing on the back of the bowl and rising far above the roof:
+    # a dark steel shaft with two neon stripes facing the pitch, and a floodlight head on top.
+    pylons = 8
+    top_y = roof_y + 95.0
+    for k in range(pylons):
+        i = int((k + 0.5) * SEGMENTS / pylons) % SEGMENTS
+        sector = i * SECTORS // SEGMENTS
+        base = ring(back_d + 3.0)[i]
+        inward = -base / np.linalg.norm(base)
+        b.prism("metal", sector, base, inward, 16.0, 12.0, 0.0, top_y)
+        for off in (-4.5, 4.5):
+            t = np.array([-inward[1], inward[0]])
+            stripe = base + inward * 6.05 + t * off
+            b.prism("neon_purple", sector, stripe, inward, 1.6, 0.3, roof_y + 6.0, top_y - 4.0)
+        head = base + inward * 4.0
+        b.prism("metal", sector, head, inward, 40.0, 6.0, top_y - 2.0, top_y + 16.0)
+        b.prism("neon_white", sector, head + inward * 3.05, inward, 36.0, 0.3, top_y, top_y + 14.0)
 
     chunks = b.chunks()
     info = {

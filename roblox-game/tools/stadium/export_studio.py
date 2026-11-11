@@ -28,7 +28,10 @@ MATERIALS = {
     "crowd": {"maps": ["color", "normal", "roughness", "metalness"]},
     "metal": {"maps": ["color", "normal", "roughness", "metalness"]},
     "roof": {"maps": ["color", "normal", "roughness", "metalness"]},
-    "led": {"neon": [78, 112, 176]},  # soft, muted blue light strips
+    # Neon parts are plain Neon MeshParts; colours match Config.Neon in the game.
+    "neon_blue": {"neon": [60, 130, 255]},
+    "neon_purple": {"neon": [150, 80, 255]},
+    "neon_white": {"neon": [215, 230, 255]},
 }
 
 
