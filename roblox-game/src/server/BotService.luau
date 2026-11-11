@@ -25,11 +25,13 @@ local keepers = {} -- [teamKey] = { actor, tracks, running, releaseAt, diveReady
 local spawning = {} -- [teamKey] = true, пока бот создаётся
 local thinkTimer = 0
 
--- Стандартные анимации R15 от Roblox (доступны в любой игре).
+-- Стандартные анимации Roblox (доступны в любой игре) для каждого типа аватара.
 local ANIMATION_IDS = {
-	idle = "rbxassetid://507766666",
-	run = "rbxassetid://507767714",
+	R6 = { idle = "rbxassetid://180435571", run = "rbxassetid://180426354" },
+	R15 = { idle = "rbxassetid://507766666", run = "rbxassetid://507767714" },
 }
+local RIG_NAME = Config.Avatar.RigType == "R15" and "R15" or "R6"
+local RIG_TYPE = RIG_NAME == "R15" and Enum.HumanoidRigType.R15 or Enum.HumanoidRigType.R6
 
 local function createRig(teamKey: string): Model?
 	local team = Config.Teams[teamKey]
@@ -45,7 +47,7 @@ local function createRig(teamKey: string): Model?
 	description.RightLegColor = dark
 
 	local ok, result = pcall(function()
-		return Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
+		return Players:CreateHumanoidModelFromDescription(description, RIG_TYPE)
 	end)
 	if not ok or typeof(result) ~= "Instance" then
 		warn("[Bots] не удалось создать вратаря: " .. tostring(result))
@@ -107,7 +109,7 @@ local function spawnKeeper(teamKey: string)
 		animator = created
 	end
 	local tracks = {}
-	for name, id in pairs(ANIMATION_IDS) do
+	for name, id in pairs(ANIMATION_IDS[RIG_NAME]) do
 		local animation = Instance.new("Animation")
 		animation.AnimationId = id
 		local ok, track = pcall(function()

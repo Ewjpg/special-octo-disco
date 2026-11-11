@@ -11,6 +11,12 @@ Config.Teams = {
 	Away = { Name = "НОКС", Color = Color3.fromRGB(88, 122, 255), Side = 1 },
 }
 
+-- Тип аватара. Анимации есть для обоих, основной — R6.
+Config.Avatar = {
+	RigType = "R6", -- "R6" или "R15"
+	ForceRig = true, -- если Roblox выдал аватар другого типа, сервер пересоберёт персонажа в нужный
+}
+
 Config.Match = {
 	Duration = 300, -- длина матча, секунды
 	KickoffCountdown = 3, -- отсчёт перед розыгрышем
@@ -84,7 +90,15 @@ Config.Dash = {
 	Stamina = 14,
 	Duration = 0.2,
 	Speed = 64,
-	ImmuneTime = 0.42, -- неуязвимость к подкату при рывке с мячом
+}
+
+-- Дриблинг: короткий финт с мячом. Пока он длится, подкат по игроку не проходит.
+Config.Dribble = {
+	Cooldown = 2.4,
+	Stamina = 10,
+	Duration = 0.2,
+	Speed = 54,
+	ImmuneTime = 0.5,
 }
 
 Config.Resonance = {
@@ -113,9 +127,9 @@ Config.Bots = {
 -- Клавиши. Имена — из Enum.KeyCode / Enum.UserInputType.
 Config.Controls = {
 	Shoot = { "MouseButton1", "ButtonR2" },
-	Pass = { "E", "ButtonX" },
+	Action = { "E", "ButtonB" }, -- без мяча — подкат, с мячом — дриблинг
+	Pass = { "F", "ButtonX" },
 	Lob = { "R", "ButtonY" },
-	Tackle = { "F", "ButtonB" },
 	Dash = { "Q", "ButtonL1" },
 	Sprint = { "LeftShift", "ButtonL2" },
 	Ability1 = { "Z", "DPadLeft" },

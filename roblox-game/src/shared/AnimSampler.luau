@@ -69,8 +69,14 @@ function AnimSampler.sample(anim, time: number, out: { [string]: { number } })
 	return out
 end
 
-function AnimSampler.toCFrame(v: { number }): CFrame
-	return CFrame.new(v[4], v[5], v[6]) * CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
+-- Поза сустава -> CFrame. pivot (необязательно) — точка { x, y, z }, вокруг которой идёт поворот.
+function AnimSampler.toCFrame(v: { number }, pivot: { number }?): CFrame
+	local rotation = CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
+	if pivot then
+		local offset = Vector3.new(pivot[1], pivot[2], pivot[3])
+		rotation = CFrame.new(offset) * rotation * CFrame.new(-offset)
+	end
+	return CFrame.new(v[4], v[5], v[6]) * rotation
 end
 
 return AnimSampler

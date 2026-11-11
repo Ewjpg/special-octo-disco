@@ -26,6 +26,7 @@ Emu.bound = {} -- ContextActionService: [name] = handler
 Emu.renderSteps = {}
 Emu.characters = {} -- [Model] = controller
 Emu.remoteLog = {} -- счётчики отправленных событий
+Emu.loadCharacterCalls = 0
 
 ---------------------------------------------------------------------------
 -- Ошибки
@@ -374,9 +375,21 @@ local function installMocks()
 	end)
 	roblox.implementMethod("Players", "CreateHumanoidModelFromDescription", function(_, description, rigType)
 		assert(description and description:IsA("HumanoidDescription"), "нужен HumanoidDescription")
-		assert(rigType == Enum.HumanoidRigType.R15, "ожидается R15")
+		assert(typeof(rigType) == "EnumItem" and rigType.EnumType == Enum.HumanoidRigType, "нужен Enum.HumanoidRigType")
 		task.wait(0.1) -- в Roblox этот вызов тоже занимает время
-		return buildRig("Rig", description.TorsoColor)
+		-- У пустого HumanoidDescription в Lune нет значения цвета по умолчанию.
+		local hasColor, color = pcall(function()
+			return description.TorsoColor
+		end)
+		return buildRig("Rig", hasColor and color or nil, rigType == Enum.HumanoidRigType.R6 and "R6" or "R15")
+	end)
+	roblox.implementMethod("Humanoid", "GetAppliedDescription", function()
+		return Instance.new("HumanoidDescription")
+	end)
+
+	roblox.implementMethod("Player", "LoadCharacter", function(self)
+		Emu.loadCharacterCalls += 1
+		Emu.spawnCharacter(self)
 	end)
 
 	-- Workspace / время
@@ -516,7 +529,7 @@ local function installMocks()
 end
 
 ---------------------------------------------------------------------------
--- Упрощённый персонаж R15 (блочный)
+-- Упрощённые блочные персонажи R15 и R6
 ---------------------------------------------------------------------------
 
 local RIG_PARTS = {
@@ -538,10 +551,72 @@ local RIG_PARTS = {
 	{ "LeftFoot", Vector3.new(1, 0.3, 1), "LeftAnkle", "LeftLowerLeg", Vector3.new(0, -0.55, 0), Vector3.new(0, 0.1, 0) },
 }
 
-Emu.RIG_PARTS = RIG_PARTS
-Emu.HIP_HEIGHT = 2
+-- Классический R6: у суставов повёрнутые оси (C0 и C1 с одинаковым поворотом), как в настоящем Roblox.
+local R6_PARTS = {
+	{
+		"Torso",
+		Vector3.new(2, 2, 1),
+		"RootJoint",
+		"HumanoidRootPart",
+		CFrame.new(0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
+		CFrame.new(0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
+	},
+	{
+		"Head",
+		Vector3.new(2, 1, 1),
+		"Neck",
+		"Torso",
+		CFrame.new(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
+		CFrame.new(0, -0.5, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
+	},
+	{
+		"Right Arm",
+		Vector3.new(1, 2, 1),
+		"Right Shoulder",
+		"Torso",
+		CFrame.new(1, 0.5, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+		CFrame.new(-0.5, 0.5, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+	},
+	{
+		"Left Arm",
+		Vector3.new(1, 2, 1),
+		"Left Shoulder",
+		"Torso",
+		CFrame.new(-1, 0.5, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+		CFrame.new(0.5, 0.5, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+	},
+	{
+		"Right Leg",
+		Vector3.new(1, 2, 1),
+		"Right Hip",
+		"Torso",
+		CFrame.new(1, -1, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+		CFrame.new(0.5, 1, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+	},
+	{
+		"Left Leg",
+		Vector3.new(1, 2, 1),
+		"Left Hip",
+		"Torso",
+		CFrame.new(-1, -1, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+		CFrame.new(-0.5, 1, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+	},
+}
 
-function buildRig(name: string, color)
+Emu.RIG_PARTS = RIG_PARTS
+Emu.R6_PARTS = R6_PARTS
+Emu.HIP_HEIGHT = 2 -- центр HumanoidRootPart в обоих случаях на высоте 3 над землёй
+Emu.defaultRig = "R6" -- какой тип аватара «выдаёт Roblox» новым игрокам
+
+local function asCFrame(value)
+	if typeof(value) == "Vector3" then
+		return CFrame.new(value)
+	end
+	return value
+end
+
+function buildRig(name: string, color, kind: string?)
+	local isR6 = (kind or Emu.defaultRig) == "R6"
 	local model = Instance.new("Model")
 	model.Name = name
 
@@ -555,10 +630,11 @@ function buildRig(name: string, color)
 	parts.HumanoidRootPart = root
 	model.PrimaryPart = root
 
-	for _, spec in ipairs(RIG_PARTS) do
+	for _, spec in ipairs(isR6 and R6_PARTS or RIG_PARTS) do
 		local partName, size, jointName, parentName, c0, c1 = spec[1], spec[2], spec[3], spec[4], spec[5], spec[6]
 		local parent = parts[parentName]
-		local part = Instance.new("MeshPart")
+		-- В R6 части тела — обычные Part, в R15 — MeshPart.
+		local part = Instance.new(isR6 and "Part" or "MeshPart")
 		part.Name = partName
 		part.Size = size
 		if color then
@@ -568,18 +644,19 @@ function buildRig(name: string, color)
 		motor.Name = jointName
 		motor.Part0 = parent
 		motor.Part1 = part
-		motor.C0 = CFrame.new(c0)
-		motor.C1 = CFrame.new(c1)
+		motor.C0 = asCFrame(c0)
+		motor.C1 = asCFrame(c1)
 		motor.Transform = CFrame.new() -- в Lune у Transform нет значения по умолчанию
 		part.CFrame = parent.CFrame * motor.C0 * motor.C1:Inverse()
-		motor.Parent = part
+		-- В R6 суставы лежат в родительской детали (Torso / HumanoidRootPart), в R15 — в дочерней.
+		motor.Parent = isR6 and parent or part
 		part.Parent = model
 		parts[partName] = part
 	end
 
 	local humanoid = Instance.new("Humanoid")
-	humanoid.RigType = Enum.HumanoidRigType.R15
-	humanoid.HipHeight = Emu.HIP_HEIGHT
+	humanoid.RigType = isR6 and Enum.HumanoidRigType.R6 or Enum.HumanoidRigType.R15
+	humanoid.HipHeight = isR6 and 0 or Emu.HIP_HEIGHT
 	humanoid.Health = 100
 	humanoid.Jump = false
 	humanoid.MoveDirection = Vector3.zero
@@ -827,7 +904,10 @@ function Emu.startServer()
 end
 
 -- Создать игрока с персонажем. Возвращает Player.
-function Emu.addPlayer(name: string, userId: number)
+local playerRig = {} -- [Player] = "R6" | "R15": какой аватар Roblox выдаёт этому игроку
+local knownCharacter = {} -- [Player] = Model: для имитации события CharacterAdded
+
+function Emu.addPlayer(name: string, userId: number, rigKind: string?)
 	local game = Emu.game
 	local players = game:GetService("Players")
 	local player = Instance.new("Player")
@@ -840,6 +920,7 @@ function Emu.addPlayer(name: string, userId: number)
 	local scripts = Instance.new("PlayerScripts")
 	scripts.Parent = player
 	player.Parent = players
+	playerRig[player] = rigKind or Emu.defaultRig
 	signalOf(players, "PlayerAdded"):Fire(player)
 	Emu.spawnCharacter(player)
 	return player
@@ -852,12 +933,28 @@ function Emu.spawnCharacter(player)
 		Emu.characters[old] = nil
 		old:Destroy()
 	end
-	local character = buildRig(player.Name, nil)
+	local character = buildRig(player.Name, nil, playerRig[player])
 	character.Parent = workspace
 	player.Character = character
+	knownCharacter[player] = character
 	Emu.characters[character] = { model = character, moveDir = Vector3.zero, moveTarget = nil, isPlayer = true }
 	signalOf(player, "CharacterAdded"):Fire(character)
 	return character
+end
+
+-- Код игры может сам подменить player.Character (например, пересобрать R15 в R6).
+-- В Roblox при этом срабатывает CharacterAdded — имитируем это.
+local function watchCharacters()
+	for _, player in ipairs(Emu.game:GetService("Players"):GetChildren()) do
+		if player:IsA("Player") then
+			local character = player.Character
+			if character and character ~= knownCharacter[player] then
+				knownCharacter[player] = character
+				Emu.characters[character] = { model = character, moveDir = Vector3.zero, moveTarget = nil, isPlayer = true }
+				signalOf(player, "CharacterAdded"):Fire(character)
+			end
+		end
+	end
 end
 
 -- Запустить клиент от имени игрока (один клиент на эмулятор).
@@ -1030,6 +1127,7 @@ end
 function Emu.step(dt: number)
 	local runService = Emu.game:GetService("RunService")
 	runDue(Emu.now + dt)
+	watchCharacters()
 	signalOf(runService, "Stepped"):Fire(Emu.now, dt)
 	stepCharacters(dt)
 	stepBall(dt)
@@ -1063,6 +1161,14 @@ function Emu.runUntil(timeout: number, condition: () -> boolean): boolean
 		Emu.step(dt)
 	end
 	return condition()
+end
+
+-- «Смерть» персонажа (например, игрок нажал Reset). Сам Roblox после этого возродил бы игрока;
+-- эмулятор этого не делает, чтобы проверить запасной путь в коде игры.
+function Emu.kill(character)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	humanoid.Health = 0
+	signalOf(humanoid, "Died"):Fire()
 end
 
 function Emu.controller(character)

@@ -335,7 +335,8 @@ end
 ---------------------------------------------------------------------------
 
 local slots = {} -- [key] = { frame, stroke, name, overlay, time, total }
-local slotOrder = { "Dash", "Tackle", "A1", "A2", "A3" }
+-- "Action" — контекстная клавиша: без мяча подкат, с мячом дриблинг.
+local slotOrder = { "Action", "Dash", "A1", "A2", "A3" }
 
 local function buildSlots()
 	local touch = UserInputService.TouchEnabled
@@ -354,8 +355,8 @@ local function buildSlots()
 	}, holder)
 
 	local keys = {
+		Action = keyName(Config.Controls.Action),
 		Dash = keyName(Config.Controls.Dash),
-		Tackle = keyName(Config.Controls.Tackle),
 		A1 = keyName(Config.Controls.Ability1),
 		A2 = keyName(Config.Controls.Ability2),
 		A3 = keyName(Config.Controls.Ability3),
@@ -416,8 +417,8 @@ local function buildSlots()
 
 	slots.Dash.name.Text = "РЫВОК"
 	slots.Dash.total = Config.Dash.Cooldown
-	slots.Tackle.name.Text = "ПОДКАТ"
-	slots.Tackle.total = Config.Tackle.Cooldown
+	slots.Action.name.Text = "ПОДКАТ"
+	slots.Action.total = Config.Tackle.Cooldown
 end
 
 -- Подписи и цвета слотов под текущий стиль.
@@ -457,7 +458,14 @@ local function updateSlots(hasBall: boolean, resonance: number)
 	local style = State.style()
 	for _, key in ipairs(slotOrder) do
 		local slot = slots[key]
-		local remaining = State.cooldown(key)
+		local cooldownKey = key
+		if key == "Action" then
+			-- Слот показывает то действие, которое сейчас сработает по этой клавише.
+			cooldownKey = hasBall and "Dribble" or "Tackle"
+			slot.total = hasBall and Config.Dribble.Cooldown or Config.Tackle.Cooldown
+			setText(slot.name, hasBall and "ДРИБЛИНГ" or "ПОДКАТ")
+		end
+		local remaining = State.cooldown(cooldownKey)
 		local fraction = math.clamp(remaining / math.max(slot.total, 0.01), 0, 1)
 		local label = ""
 		if remaining >= 10 then
@@ -467,9 +475,7 @@ local function updateSlots(hasBall: boolean, resonance: number)
 		end
 		local usable = remaining <= 0
 
-		if key == "Tackle" then
-			usable = usable and not hasBall
-		elseif key ~= "Dash" then
+		if key ~= "Action" and key ~= "Dash" then
 			local ability = style.abilities[tonumber(string.sub(key, 2)) :: number]
 			if not ability then
 				usable = false
@@ -508,10 +514,10 @@ local function buildHelp()
 		{ "WASD / Пробел", "движение, прыжок" },
 		{ keyName(c.Sprint), "бег (тратит силы)" },
 		{ keyName(c.Shoot) .. " (держать)", "удар: дольше — сильнее" },
+		{ keyName(c.Action), "подкат, а с мячом — дриблинг" },
 		{ keyName(c.Pass), "пас партнёру" },
 		{ keyName(c.Lob), "навес" },
-		{ keyName(c.Tackle), "подкат (без мяча)" },
-		{ keyName(c.Dash), "рывок / финт с мячом" },
+		{ keyName(c.Dash), "рывок" },
 		{ keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "способности стиля" },
 		{ keyName(c.Ability3), "ульта (полный Резонанс)" },
 		{ keyName(c.StyleMenu), "сменить стиль" },
@@ -522,7 +528,7 @@ local function buildHelp()
 		Name = "Help",
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 18, 1, -24),
-		Size = UDim2.fromOffset(300, 46 + #lines * 20),
+		Size = UDim2.fromOffset(340, 46 + #lines * 20),
 		BackgroundColor3 = PANEL,
 		BackgroundTransparency = 0.18,
 		BorderSizePixel = 0,

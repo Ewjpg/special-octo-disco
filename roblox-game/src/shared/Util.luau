@@ -72,6 +72,12 @@ function Util.rightOf(dir: Vector3): Vector3
 	return Vector3.new(-d.Z, 0, d.X)
 end
 
+-- Расстояние от центра HumanoidRootPart до земли. У R6 HipHeight равен 0, а ноги — 2 студа.
+function Util.groundOffset(root: BasePart, humanoid: Humanoid): number
+	local legs = humanoid.RigType == Enum.HumanoidRigType.R6 and 2 or humanoid.HipHeight
+	return root.Size.Y / 2 + legs
+end
+
 -- Верхний регистр с поддержкой кириллицы (string.upper понимает только латиницу).
 function Util.upper(text: string): string
 	local out = {}

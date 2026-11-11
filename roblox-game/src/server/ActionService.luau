@@ -15,7 +15,7 @@ local Match = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
 
 local SHOT, PASS, LOB = Config.Shot, Config.Pass, Config.Lob
-local TACKLE, DASH, RES = Config.Tackle, Config.Dash, Config.Resonance
+local TACKLE, DASH, DRIBBLE, RES = Config.Tackle, Config.Dash, Config.Dribble, Config.Resonance
 
 local Actions = {}
 
@@ -191,10 +191,23 @@ function handlers.Dash(actor, direction)
 		return
 	end
 	Actors.setCooldown(actor, "Dash", DASH.Cooldown)
-	if actor.hasBall then
-		Actors.setImmune(actor, DASH.ImmuneTime) -- финт: подкат в этот момент не проходит
-	end
 	Net.fx("Dash", { character = actor.character, hasBall = actor.hasBall })
+end
+
+-- Дриблинг: финт с мячом. На короткое время игрока нельзя обокрасть подкатом.
+function handlers.Dribble(actor, direction)
+	local t = Actors.now()
+	if not ready(actor, t) or not actor.hasBall or not Actors.cooldownReady(actor, "Dribble", t) then
+		return
+	end
+	local dir = flatDir(direction, actor.root.CFrame.LookVector)
+	if not dir or not Actors.spendStamina(actor, DRIBBLE.Stamina) then
+		return
+	end
+	setCharging(actor, false)
+	Actors.setCooldown(actor, "Dribble", DRIBBLE.Cooldown)
+	Actors.setImmune(actor, DRIBBLE.ImmuneTime)
+	Net.fx("Dribble", { character = actor.character })
 end
 
 ---------------------------------------------------------------------------

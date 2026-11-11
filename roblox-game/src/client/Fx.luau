@@ -287,8 +287,9 @@ function Fx.afterimage(character: Model?, color: Color3, options: { [string]: an
 					clone.TextureID = ""
 					ghost = clone
 				else
+					-- Детали R6 — обычные блоки; голову рисуем кубиком поменьше (у неё сетка, а не форма детали).
 					local block = Instance.new("Part")
-					block.Size = source.Size
+					block.Size = name == "Head" and Vector3.new(1.25, 1.25, 1.25) or source.Size
 					ghost = block
 				end
 				ghost.Name = "Afterimage"
@@ -340,6 +341,9 @@ function Fx.charTrail(character: Model?, color: Color3, duration: number)
 	trail.Parent = torso
 
 	task.delay(duration, function()
+		if not trail.Parent then
+			return -- персонажа уже нет (респаун, выход) — шлейф удалился вместе с ним
+		end
 		trail.Enabled = false
 		Debris:AddItem(trail, 0.5)
 		Debris:AddItem(top, 0.5)

@@ -1,4 +1,4 @@
--- Проигрывает анимации из Shared/Animations на любом персонаже R15.
+-- Проигрывает анимации из Shared/Animations на персонажах R6 и R15.
 -- Работает через Motor6D.Transform: каждый кадр (Stepped) мы подмешиваем свою позу
 -- поверх того, что выставил стандартный Animator (бег, стойка).
 
@@ -12,63 +12,88 @@ local AnimSampler = require(Shared.AnimSampler)
 local ProcAnimator = {}
 
 local JOINTS = {
-	Root = true,
-	Waist = true,
-	Neck = true,
-	RightShoulder = true,
-	RightElbow = true,
-	RightWrist = true,
-	LeftShoulder = true,
-	LeftElbow = true,
-	LeftWrist = true,
-	RightHip = true,
-	RightKnee = true,
-	RightAnkle = true,
-	LeftHip = true,
-	LeftKnee = true,
-	LeftAnkle = true,
+	R15 = {
+		"Root",
+		"Waist",
+		"Neck",
+		"RightShoulder",
+		"RightElbow",
+		"RightWrist",
+		"LeftShoulder",
+		"LeftElbow",
+		"LeftWrist",
+		"RightHip",
+		"RightKnee",
+		"RightAnkle",
+		"LeftHip",
+		"LeftKnee",
+		"LeftAnkle",
+	},
+	R6 = { "RootJoint", "Neck", "Right Shoulder", "Left Shoulder", "Right Hip", "Left Hip" },
 }
 
-local rigs = {} -- [Model] = { motors, count, tracks, written }
+local rigs = {} -- [Model] = { kind, motors, frames, count, tracks, written }
 
-local function findMotors(character: Model)
-	local motors = {}
+-- Тип аватара определяем по Humanoid, а если его нет — по именам суставов.
+local function detectKind(character: Model): string
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		return humanoid.RigType == Enum.HumanoidRigType.R6 and "R6" or "R15"
+	end
+	return character:FindFirstChild("Torso") and "R6" or "R15"
+end
+
+local function findMotors(character: Model, kind: string)
+	local wanted = {}
+	for _, name in ipairs(JOINTS[kind]) do
+		wanted[name] = true
+	end
+	local motors, frames = {}, {}
 	local count = 0
 	for _, descendant in ipairs(character:GetDescendants()) do
-		if descendant:IsA("Motor6D") and JOINTS[descendant.Name] and not motors[descendant.Name] then
+		if descendant:IsA("Motor6D") and wanted[descendant.Name] and not motors[descendant.Name] then
 			motors[descendant.Name] = descendant
+			-- У суставов R6 оси повёрнуты (C0 с поворотом). Позы заданы в осях персонажа,
+			-- поэтому перед записью в Transform переводим их в оси сустава.
+			local rotation = descendant.C0.Rotation
+			frames[descendant.Name] = { rotation = rotation, inverse = rotation:Inverse() }
 			count += 1
 		end
 	end
-	return motors, count
+	return motors, frames, count
 end
 
 local function getRig(character: Model)
 	local rig = rigs[character]
 	if not rig then
-		rig = { motors = {}, count = 0, tracks = {}, written = {} }
+		rig = { kind = detectKind(character), motors = {}, frames = {}, count = 0, tracks = {}, written = {} }
 		rigs[character] = rig
 	end
-	if rig.count < 12 then
-		rig.motors, rig.count = findMotors(character)
+	if rig.count < #JOINTS[rig.kind] - 3 then
+		rig.kind = detectKind(character)
+		rig.motors, rig.frames, rig.count = findMotors(character, rig.kind)
 	end
 	return rig
 end
 
 -- options: speed, weight, fadeIn, fadeOut
 function ProcAnimator.play(character: Model?, name: string, options: { [string]: number }?)
-	local anim = Animations[name]
-	if not anim or not character or not character.Parent then
+	if not character or not character.Parent then
 		return nil
 	end
 	local rig = getRig(character)
+	local anim = Animations.get(name, rig.kind)
+	if not anim then
+		return nil
+	end
 	for i = #rig.tracks, 1, -1 do
-		if rig.tracks[i].anim == anim then
+		if rig.tracks[i].name == name then
 			table.remove(rig.tracks, i)
 		end
 	end
 	local opts = options or {}
 	local track = {
+		name = name,
 		anim = anim,
 		time = 0,
 		elapsed = 0,
@@ -100,9 +125,8 @@ function ProcAnimator.stop(character: Model?, name: string)
 	if not rig then
 		return
 	end
-	local anim = Animations[name]
 	for _, track in ipairs(rig.tracks) do
-		if track.anim == anim then
+		if track.name == name then
 			track.stopping = true
 		end
 	end
@@ -113,9 +137,8 @@ function ProcAnimator.isPlaying(character: Model?, name: string): boolean
 	if not rig then
 		return false
 	end
-	local anim = Animations[name]
 	for _, track in ipairs(rig.tracks) do
-		if track.anim == anim and not track.stopping then
+		if track.name == name and not track.stopping then
 			return true
 		end
 	end
@@ -172,10 +195,13 @@ local function stepRig(rig, dt: number)
 		end
 		local result = base
 		local touched = false
+		local frame = rig.frames[name]
 		for _, track in ipairs(rig.tracks) do
 			local value = track.pose[name]
 			if value and track.weight > 0 then
-				result = result:Lerp(AnimSampler.toCFrame(value), track.weight)
+				local pivots = track.anim.pivots
+				local desired = AnimSampler.toCFrame(value, pivots and pivots[name])
+				result = result:Lerp(frame.inverse * desired * frame.rotation, track.weight)
 				touched = true
 			end
 		end

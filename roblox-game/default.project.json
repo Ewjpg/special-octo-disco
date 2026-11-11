@@ -15,7 +15,8 @@
     "StarterPlayer": {
       "$properties": {
         "CameraMaxZoomDistance": 40,
-        "CameraMinZoomDistance": 6
+        "CameraMinZoomDistance": 6,
+        "GameSettingsAvatar": "R6"
       },
       "StarterPlayerScripts": {
         "Client": {

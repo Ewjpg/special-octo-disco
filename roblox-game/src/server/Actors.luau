@@ -46,7 +46,6 @@ function Actors.register(character: Model, info)
 
 	local data = info.data or { styleId = info.styleId or Styles.default, resonance = 0, cooldowns = {} }
 	local style = Styles.get(data.styleId)
-	local isR6 = humanoid.RigType == Enum.HumanoidRigType.R6
 	local staminaMax = P.MaxStamina * (style.stats.stamina or 1)
 
 	local actor = {
@@ -61,7 +60,7 @@ function Actors.register(character: Model, info)
 		side = Config.Teams[info.team].Side,
 		style = style,
 		alive = true,
-		groundOffset = root.Size.Y / 2 + (isR6 and 2 or humanoid.HipHeight),
+		groundOffset = Util.groundOffset(root, humanoid),
 
 		stamina = staminaMax,
 		staminaMax = staminaMax,

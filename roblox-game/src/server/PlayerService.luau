@@ -2,6 +2,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -94,6 +95,42 @@ end
 
 PlayerService.addKit = addKit
 
+local WANTED_RIG = Config.Avatar.RigType == "R15" and Enum.HumanoidRigType.R15 or Enum.HumanoidRigType.R6
+
+-- Roblox создал персонажа не того типа (например R15, а игра рассчитана на R6):
+-- собираем такого же персонажа — с вещами и цветами игрока — на нужном скелете и подменяем.
+-- Возвращает true, если подмена удалась (тогда для нового персонажа сработает CharacterAdded).
+local function replaceRig(player: Player, character: Model, humanoid: Humanoid): boolean
+	local description: HumanoidDescription? = nil
+	pcall(function()
+		description = humanoid:GetAppliedDescription()
+	end)
+	local ok, result = pcall(function()
+		return Players:CreateHumanoidModelFromDescription(description or Instance.new("HumanoidDescription"), WANTED_RIG)
+	end)
+	if not ok or typeof(result) ~= "Instance" then
+		warn(
+			"[Players] не удалось пересобрать персонажа в "
+				.. Config.Avatar.RigType
+				.. ": "
+				.. tostring(result)
+		)
+		return false
+	end
+	-- Создание модели занимает время: за это время игрок мог выйти или его персонаж мог смениться.
+	if not dataByPlayer[player] or player.Character ~= character or not character.Parent then
+		result:Destroy()
+		return true
+	end
+	local model = result :: Model
+	model.Name = player.Name
+	model:PivotTo(character:GetPivot())
+	player.Character = model
+	model.Parent = Workspace
+	character:Destroy()
+	return true
+end
+
 local function onCharacter(player: Player, character: Model)
 	local data = dataByPlayer[player]
 	if not data then
@@ -108,8 +145,29 @@ local function onCharacter(player: Player, character: Model)
 		character.AncestryChanged:Wait()
 	end
 	task.wait(0.2) -- персонаж должен полностью собраться (HipHeight, аксессуары)
-	if player.Character ~= character or not character.Parent then
-		return
+	if not dataByPlayer[player] or player.Character ~= character or not character.Parent then
+		return -- игрок вышел или персонаж уже сменился
+	end
+
+	if Config.Avatar.ForceRig and humanoid.RigType ~= WANTED_RIG then
+		-- Страховка от зацикливания: если пересборка идёт слишком часто, перестаём её делать для этого игрока.
+		local now = os.clock()
+		if now - (data.lastRebuild or 0) > 15 then
+			data.rebuilds = 0
+		end
+		data.lastRebuild = now
+		data.rebuilds = (data.rebuilds or 0) + 1
+		if data.rebuilds <= 4 then
+			if replaceRig(player, character, humanoid) then
+				return
+			end
+		elseif data.rebuilds == 5 then
+			warn(
+				"[Players] пересборка персонажа отключена для "
+					.. player.Name
+					.. ": слишком частые повторы"
+			)
+		end
 	end
 
 	Physics.tagCharacter(character)
@@ -123,6 +181,15 @@ local function onCharacter(player: Player, character: Model)
 
 	humanoid.Died:Connect(function()
 		Actors.unregister(character)
+		-- Обычно Roblox возрождает игрока сам. Если этого не случилось (персонаж был собран нами вручную),
+		-- загружаем нового персонажа сами.
+		task.delay(Players.RespawnTime + 1.5, function()
+			if dataByPlayer[player] and player.Character == character then
+				pcall(function()
+					player:LoadCharacter()
+				end)
+			end
+		end)
 	end)
 	character.AncestryChanged:Connect(function(_, parent)
 		if not parent then

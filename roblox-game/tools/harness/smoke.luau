@@ -160,7 +160,20 @@ check("персонаж зарегистрирован как актёр", Actor
 check("метка команды на персонаже", alice.Character:FindFirstChild("TeamRing") ~= nil)
 local hud = alice.PlayerGui:FindFirstChild("ResonanceHud")
 check("HUD создан", hud ~= nil)
-check("клавиши привязаны", Emu.bound.RS_Shoot ~= nil and Emu.bound.RS_Ability3 ~= nil and Emu.bound.RS_StyleMenu ~= nil)
+check(
+	"клавиши привязаны",
+	Emu.bound.RS_Shoot ~= nil and Emu.bound.RS_Action ~= nil and Emu.bound.RS_Ability3 ~= nil and Emu.bound.RS_StyleMenu ~= nil
+)
+check("персонаж игрока — R6", alice.Character.Humanoid.RigType == Enum.HumanoidRigType.R6)
+do
+	local r6Keepers = 0
+	for _, actor in pairs(Actors.byCharacter) do
+		if actor.isKeeper and actor.humanoid.RigType == Enum.HumanoidRigType.R6 then
+			r6Keepers += 1
+		end
+	end
+	check("вратари — R6", r6Keepers == 2, r6Keepers)
+end
 
 Emu.run(2)
 check("меню стилей открылось при входе", ClientControls.menuOpen == true)
@@ -256,9 +269,21 @@ local function giveBall(player)
 end
 
 -- Соперник и партнёр нужны для проверки способностей; пока стоят в стороне.
-local bob = Emu.addPlayer("Bob", 202)
+-- Бобу Roblox «выдаёт» R15: сервер должен пересобрать его в R6.
+local bob = Emu.addPlayer("Bob", 202, "R15")
 local carol = Emu.addPlayer("Carol", 303)
-Emu.run(0.8)
+Emu.run(1.5)
+do
+	local humanoid = bob.Character and bob.Character:FindFirstChildOfClass("Humanoid")
+	check("R15 пересобран в R6", humanoid ~= nil and humanoid.RigType == Enum.HumanoidRigType.R6)
+	local copies = 0
+	for _, child in ipairs(workspace:GetChildren()) do
+		if child.Name == "Bob" then
+			copies += 1
+		end
+	end
+	check("старый персонаж R15 удалён", copies == 1, copies)
+end
 local actorBob = Actors.ofPlayer(bob)
 local actorCarol = Actors.ofPlayer(carol)
 check(
@@ -549,7 +574,7 @@ do
 end
 
 ---------------------------------------------------------------------------
-section("Подкат, финт, пас")
+section("Клавиша E: подкат и дриблинг")
 ---------------------------------------------------------------------------
 
 waitLive(40)
@@ -570,7 +595,7 @@ end
 
 resetDuel()
 check("мяч у соперника", hasBall(bob))
-Emu.tap("RS_Tackle")
+Emu.tap("RS_Action")
 Emu.run(0.8)
 check("подкат выбил мяч", not hasBall(bob))
 check("соперник оглушён", (bob.Character:GetAttribute("StunnedUntil") or 0) > Actors.now() - 0.8)
@@ -580,10 +605,57 @@ Emu.run(3)
 resetDuel()
 Actors.setImmune(Actors.ofPlayer(bob), 3)
 local dodgesBefore = Emu.remoteLog["<-Dodge"] or 0
-Emu.tap("RS_Tackle")
+Emu.tap("RS_Action")
 Emu.run(0.8)
-check("финт: подкат не прошёл", hasBall(bob))
+check("неуязвимый соперник: подкат не прошёл", hasBall(bob))
 check("событие Dodge отправлено", (Emu.remoteLog["<-Dodge"] or 0) > dodgesBefore)
+Emu.run(3)
+
+-- Та же клавиша с мячом — дриблинг. Соперник в этот момент делает подкат и должен промахнуться.
+local actionRemote = ReplicatedStorage.Remotes.Action
+local function duelWithBall()
+	waitLive(40)
+	for _, player in ipairs({ alice, bob }) do
+		local actor = Actors.ofPlayer(player)
+		actor.stamina = actor.staminaMax
+		actor.stunnedUntil = 0
+		actor.immuneUntil = 0
+		actor.data.cooldowns.Tackle = 0
+		actor.data.cooldowns.Dribble = 0
+		player:SetAttribute("CD_Tackle", 0)
+		player:SetAttribute("CD_Dribble", 0)
+	end
+	place(carol, Vector3.new(-90, 0, 70), Vector3.new(0, 0, 70))
+	place(bob, Vector3.new(0, 0, -40), Vector3.new(-20, 0, -40))
+	place(alice, Vector3.new(-10, 0, -40), Vector3.new(0, 0, -40))
+	giveBall(alice)
+	Emu.run(0.2)
+end
+
+duelWithBall()
+local dribbleFrom = rootOf(alice).CFrame.Position
+local dribblesBefore = Emu.remoteLog["<-Dribble"] or 0
+dodgesBefore = Emu.remoteLog["<-Dodge"] or 0
+Emu.tap("RS_Action")
+Emu.signalOf(actionRemote, "OnServerEvent"):Fire(bob, "Tackle", Vector3.new(-1, 0, 0))
+Emu.run(0.8)
+local dribbled = (rootOf(alice).CFrame.Position - dribbleFrom).Magnitude
+check("E с мячом — дриблинг (событие Dribble)", (Emu.remoteLog["<-Dribble"] or 0) > dribblesBefore)
+check("дриблинг сдвигает игрока", dribbled > 7 and dribbled < 14, string.format("%.1f", dribbled))
+check(
+	"дриблинг: подкат соперника не прошёл",
+	hasBall(alice) and (Emu.remoteLog["<-Dodge"] or 0) > dodgesBefore
+)
+check("у дриблинга своя перезарядка", (alice:GetAttribute("CD_Dribble") or 0) > Actors.now())
+Emu.run(3)
+
+-- Контроль: без дриблинга тот же подкат мяч отбирает.
+duelWithBall()
+place(alice, Vector3.new(-5, 0, -40), Vector3.new(0, 0, -40))
+Emu.run(0.1)
+Emu.signalOf(actionRemote, "OnServerEvent"):Fire(bob, "Tackle", Vector3.new(-1, 0, 0))
+Emu.run(0.6)
+check("без дриблинга подкат отбирает мяч", not hasBall(alice))
 Emu.run(3)
 
 -- Пас партнёру.
@@ -747,6 +819,21 @@ check(
 )
 check("мяч можно столкнуть (CanCollide)", ballPart().CanCollide == true)
 check("респаун без ошибок", #Emu.errors == errorsBefore, #Emu.errors - errorsBefore)
+
+-- Смерть персонажа: мяч освобождается, а если Roblox сам не возродил игрока — это делает сервер.
+giveBall(alice)
+Emu.run(0.2)
+local deadCharacter = alice.Character
+local loadsBefore = Emu.loadCharacterCalls
+Emu.kill(deadCharacter)
+Emu.run(0.3)
+check("после смерти актёр снят, мяч свободен", Actors.get(deadCharacter) == nil and Ball.holder == nil)
+Emu.run(4.5)
+check("сервер сам возродил игрока", Emu.loadCharacterCalls == loadsBefore + 1 and alice.Character ~= deadCharacter)
+check(
+	"новый персонаж зарегистрирован",
+	Actors.ofPlayer(alice) ~= nil and Actors.ofPlayer(alice).character == alice.Character
+)
 
 Emu.signalOf(game:GetService("Players"), "PlayerRemoving"):Fire(bob)
 Emu.characters[bob.Character] = nil

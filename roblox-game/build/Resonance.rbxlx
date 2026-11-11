@@ -81,8 +81,14 @@ function AnimSampler.sample(anim, time: number, out: { [string]: { number } })
 	return out
 end
 
-function AnimSampler.toCFrame(v: { number }): CFrame
-	return CFrame.new(v[4], v[5], v[6]) * CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
+-- Поза сустава -> CFrame. pivot (необязательно) — точка { x, y, z }, вокруг которой идёт поворот.
+function AnimSampler.toCFrame(v: { number }, pivot: { number }?): CFrame
+	local rotation = CFrame.Angles(math.rad(v[1]), math.rad(v[2]), math.rad(v[3]))
+	if pivot then
+		local offset = Vector3.new(pivot[1], pivot[2], pivot[3])
+		rotation = CFrame.new(offset) * rotation * CFrame.new(-offset)
+	end
+	return CFrame.new(v[4], v[5], v[6]) * rotation
 end
 
 return AnimSampler
@@ -92,18 +98,21 @@ return AnimSampler
       <Item class="ModuleScript" referent="3">
         <Properties>
           <string name="Name">Animations</string>
-          <string name="Source"><![CDATA[-- Все анимации игры заданы кодом: ключевые позы суставов R15 в градусах.
+          <string name="Source"><![CDATA[-- Все анимации игры заданы кодом: ключевые позы суставов в градусах.
 -- Их проигрывает клиентский ProcAnimator поверх стандартных анимаций ходьбы/бега.
 --
+-- Позы описаны для R15 (15 суставов). Для R6 (6 суставов) они пересчитываются автоматически,
+-- см. retarget ниже; если авто-поза не нравится, анимации можно дать поле r6 с позами вручную.
+--
 -- Формат сустава: { rx, ry, rz, px, py, pz } — поворот в градусах и (необязательно) смещение в студах.
--- Оси (персонаж смотрит вдоль -Z):
+-- Оси одинаковы для обоих типов аватара (персонаж смотрит вдоль -Z):
 --   +rx  нога/рука вперёд, корпус — назад      -rx  нога/рука назад, корпус — наклон вперёд
 --   +ry  поворот влево                          -ry  поворот вправо
 --   +rz  конечность вправо, корпус — влево      -rz  конечность влево, корпус — вправо
---   Колено сгибается через -rx, локоть — через +rx.
+--   Колено сгибается через -rx, локоть — через +rx (только R15).
 -- Сустав, не указанный ни в одном ключе анимации, остаётся под обычной анимацией Roblox.
 
-local Animations = {}
+local R15 = {}
 
 local function mirrorPose(pose)
 	local result = {}
@@ -150,7 +159,7 @@ local WINDUP = {
 }
 
 -- Замах, пока игрок держит кнопку удара.
-Animations.ChargeHold = {
+R15.ChargeHold = {
 	loop = true,
 	length = 0.7,
 	fadeIn = 0.14,
@@ -181,7 +190,7 @@ Animations.ChargeHold = {
 }
 
 -- Удар: начинается из замаха, нога выстреливает вперёд.
-Animations.Shoot = {
+R15.Shoot = {
 	length = 0.52,
 	fadeIn = 0.04,
 	fadeOut = 0.2,
@@ -229,7 +238,7 @@ Animations.Shoot = {
 }
 
 -- Усиленный удар для способностей: замах 0.2 с, затем выстрел.
-Animations.PowerShot = {
+R15.PowerShot = {
 	length = 0.7,
 	fadeIn = 0.06,
 	fadeOut = 0.22,
@@ -311,7 +320,7 @@ Animations.PowerShot = {
 }
 
 -- Пас щёчкой.
-Animations.Pass = {
+R15.Pass = {
 	length = 0.36,
 	fadeIn = 0.04,
 	fadeOut = 0.16,
@@ -360,7 +369,7 @@ Animations.Pass = {
 }
 
 -- Навес: подсечка мяча с отклонением назад.
-Animations.Lob = {
+R15.Lob = {
 	length = 0.46,
 	fadeIn = 0.04,
 	fadeOut = 0.18,
@@ -435,7 +444,7 @@ local SLIDE = {
 }
 
 -- Подкат: корпус отклонён назад, правая нога вытянута вперёд, левая согнута коленом вверх.
-Animations.Slide = {
+R15.Slide = {
 	length = 0.8,
 	fadeIn = 0.07,
 	fadeOut = 0.22,
@@ -462,7 +471,7 @@ local DASH_A = {
 }
 
 -- Рывок: корпус вперёд, руки отведены назад.
-Animations.Dash = {
+R15.Dash = {
 	length = 0.38,
 	fadeIn = 0.05,
 	fadeOut = 0.16,
@@ -490,7 +499,7 @@ Animations.Dash = {
 }
 
 -- Таран плечом (Бастион).
-Animations.Ram = {
+R15.Ram = {
 	length = 0.5,
 	fadeIn = 0.05,
 	fadeOut = 0.18,
@@ -533,7 +542,7 @@ Animations.Ram = {
 }
 
 -- Оглушение после отбора: шатается.
-Animations.Stun = {
+R15.Stun = {
 	length = 0.8,
 	fadeIn = 0.05,
 	fadeOut = 0.25,
@@ -577,12 +586,56 @@ Animations.Stun = {
 	},
 }
 
+-- Дриблинг (финт с мячом): качнулся в одну сторону — ушёл в другую.
+R15.Dribble = {
+	length = 0.4,
+	fadeIn = 0.04,
+	fadeOut = 0.16,
+	priority = 3,
+	keys = {
+		{
+			t = 0,
+			pose = {
+				Root = { -10, 0, -16 },
+				Waist = { -6, -12, 0 },
+				Neck = { 4, 14, 0 },
+				RightShoulder = { -30, 0, 44 },
+				RightElbow = { 30, 0, 0 },
+				LeftShoulder = { 34, 0, -54 },
+				LeftElbow = { 30, 0, 0 },
+				RightHip = { 34, 0, 12 },
+				RightKnee = { -44, 0, 0 },
+				LeftHip = { -16, 0, -12 },
+				LeftKnee = { -20, 0, 0 },
+			},
+		},
+		{
+			t = 0.16,
+			ease = "quadInOut",
+			pose = {
+				Root = { -14, 0, 14 },
+				Waist = { -8, 12, 0 },
+				Neck = { 4, -14, 0 },
+				RightShoulder = { 34, 0, 54 },
+				RightElbow = { 30, 0, 0 },
+				LeftShoulder = { -30, 0, -44 },
+				LeftElbow = { 30, 0, 0 },
+				RightHip = { -18, 0, 10 },
+				RightKnee = { -24, 0, 0 },
+				LeftHip = { 38, 0, -10 },
+				LeftKnee = { -48, 0, 0 },
+			},
+		},
+		{ t = 0.4, ease = "quadInOut", pose = REST },
+	},
+}
+
 ---------------------------------------------------------------------------
 -- Способности и эмоции
 ---------------------------------------------------------------------------
 
 -- Выброс руки вперёд (притяжение, барьер).
-Animations.Cast = {
+R15.Cast = {
 	length = 0.55,
 	fadeIn = 0.06,
 	fadeOut = 0.18,
@@ -626,7 +679,7 @@ Animations.Cast = {
 }
 
 -- Включение ульты: сжался — и раскрылся.
-Animations.PowerStance = {
+R15.PowerStance = {
 	length = 0.95,
 	fadeIn = 0.08,
 	fadeOut = 0.22,
@@ -687,7 +740,7 @@ Animations.PowerStance = {
 }
 
 -- Празднование гола: присел и выпрыгнул с руками вверх.
-Animations.Celebrate = {
+R15.Celebrate = {
 	length = 1.9,
 	fadeIn = 0.1,
 	fadeOut = 0.3,
@@ -766,7 +819,7 @@ Animations.Celebrate = {
 }
 
 -- Прыжок вратаря вправо (влево — зеркально).
-Animations.DiveRight = {
+R15.DiveRight = {
 	length = 0.75,
 	fadeIn = 0.06,
 	fadeOut = 0.25,
@@ -808,7 +861,7 @@ Animations.DiveRight = {
 		{ t = 0.75, ease = "quadInOut", pose = REST },
 	},
 }
-Animations.DiveLeft = mirror(Animations.DiveRight)
+R15.DiveLeft = mirror(R15.DiveRight)
 
 ---------------------------------------------------------------------------
 -- Подготовка: в каждом ключе должны быть все суставы анимации.
@@ -843,8 +896,99 @@ local function compile(name: string, anim)
 	end
 end
 
-for name, anim in pairs(Animations) do
+---------------------------------------------------------------------------
+-- R6: шесть суставов. Корпус цельный, локтей и коленей нет.
+---------------------------------------------------------------------------
+
+-- Корпус R6 вращаем вокруг линии бёдер (на 1 студ ниже центра), а не вокруг центра —
+-- иначе при наклоне ноги «уезжали» бы назад.
+local R6_PIVOTS = { RootJoint = { 0, -1, 0 } }
+
+-- Поза R15 -> поза R6.
+--   корпус   = таз + поясница
+--   плечо    = плечо + половина сгиба локтя
+--   бедро    = бедро + часть сгиба колена, минус поворот поясницы (в R6 ноги растут из цельного корпуса)
+-- Ноги R6 не гнутся, поэтому замах ограничен, а приседать можно только настолько, насколько ноги наклонены.
+local LEG_LENGTH = 2
+
+local function retargetPose(pose)
+	local function get(name: string)
+		return pose[name] or ZERO
+	end
+	local root, waist = get("Root"), get("Waist")
+	local torso = { root[1] + waist[1], root[2] + waist[2], root[3] + waist[3], root[4], root[5], root[6] }
+	local out = {}
+	if pose.Neck then
+		out.Neck = table.clone(pose.Neck)
+	end
+
+	-- Насколько можно опустить корпус, чтобы самая «вертикальная» нога не ушла под газон.
+	local straightest = 1
+	local hasLegs = false
+	for _, side in ipairs({ "Right", "Left" }) do
+		local shoulder = pose[side .. "Shoulder"]
+		if shoulder then
+			local elbow = get(side .. "Elbow")
+			out[side .. " Shoulder"] = { shoulder[1] + elbow[1] * 0.5, shoulder[2], shoulder[3], 0, 0, 0 }
+		end
+		local hip = pose[side .. "Hip"]
+		if hip then
+			local knee = get(side .. "Knee")
+			local rx = math.clamp(hip[1] + knee[1] * 0.2 - waist[1], -62, 112)
+			local ry, rz = hip[2] - waist[2], hip[3] - waist[3]
+			out[side .. " Hip"] = { rx, ry, rz, 0, 0, 0 }
+			local vertical = math.cos(math.rad(torso[1] + rx)) * math.cos(math.rad(torso[3] + rz))
+			if not hasLegs then
+				straightest = vertical
+				hasLegs = true
+			else
+				straightest = math.max(straightest, vertical)
+			end
+		end
+	end
+	if pose.Root or pose.Waist then
+		local lowest = LEG_LENGTH * math.max(straightest, 0) - LEG_LENGTH
+		torso[5] = math.max(torso[5], lowest)
+		out.RootJoint = torso
+	end
+	return out
+end
+
+local function retarget(anim)
+	local copy = table.clone(anim)
+	copy.r6 = nil
+	copy.pivots = R6_PIVOTS
+	copy.keys = {}
+	local source = anim.r6 and anim.r6.keys or nil
+	if source then
+		-- Позы R6 заданы вручную.
+		for i, key in ipairs(source) do
+			copy.keys[i] = { t = key.t, ease = key.ease, pose = key.pose }
+		end
+	else
+		for i, key in ipairs(anim.keys) do
+			copy.keys[i] = { t = key.t, ease = key.ease, pose = retargetPose(key.pose) }
+		end
+	end
+	return copy
+end
+
+local R6 = {}
+for name, anim in pairs(R15) do
 	compile(name, anim)
+end
+for name, anim in pairs(R15) do
+	local converted = retarget(anim)
+	compile(name, converted)
+	R6[name] = converted
+end
+
+local Animations = { R15 = R15, R6 = R6 }
+
+-- Анимация по имени для нужного типа аватара ("R6" или "R15").
+function Animations.get(name: string, rig: string?)
+	local set = rig == "R6" and R6 or R15
+	return set[name]
 end
 
 return Animations
@@ -865,6 +1009,12 @@ Config.GameTitle = "RESONANCE"
 Config.Teams = {
 	Home = { Name = "СОЛАР", Color = Color3.fromRGB(255, 124, 48), Side = -1 },
 	Away = { Name = "НОКС", Color = Color3.fromRGB(88, 122, 255), Side = 1 },
+}
+
+-- Тип аватара. Анимации есть для обоих, основной — R6.
+Config.Avatar = {
+	RigType = "R6", -- "R6" или "R15"
+	ForceRig = true, -- если Roblox выдал аватар другого типа, сервер пересоберёт персонажа в нужный
 }
 
 Config.Match = {
@@ -940,7 +1090,15 @@ Config.Dash = {
 	Stamina = 14,
 	Duration = 0.2,
 	Speed = 64,
-	ImmuneTime = 0.42, -- неуязвимость к подкату при рывке с мячом
+}
+
+-- Дриблинг: короткий финт с мячом. Пока он длится, подкат по игроку не проходит.
+Config.Dribble = {
+	Cooldown = 2.4,
+	Stamina = 10,
+	Duration = 0.2,
+	Speed = 54,
+	ImmuneTime = 0.5,
 }
 
 Config.Resonance = {
@@ -969,9 +1127,9 @@ Config.Bots = {
 -- Клавиши. Имена — из Enum.KeyCode / Enum.UserInputType.
 Config.Controls = {
 	Shoot = { "MouseButton1", "ButtonR2" },
-	Pass = { "E", "ButtonX" },
+	Action = { "E", "ButtonB" }, -- без мяча — подкат, с мячом — дриблинг
+	Pass = { "F", "ButtonX" },
 	Lob = { "R", "ButtonY" },
-	Tackle = { "F", "ButtonB" },
 	Dash = { "Q", "ButtonL1" },
 	Sprint = { "LeftShift", "ButtonL2" },
 	Ability1 = { "Z", "DPadLeft" },
@@ -2129,6 +2287,12 @@ function Util.rightOf(dir: Vector3): Vector3
 	return Vector3.new(-d.Z, 0, d.X)
 end
 
+-- Расстояние от центра HumanoidRootPart до земли. У R6 HipHeight равен 0, а ноги — 2 студа.
+function Util.groundOffset(root: BasePart, humanoid: Humanoid): number
+	local legs = humanoid.RigType == Enum.HumanoidRigType.R6 and 2 or humanoid.HipHeight
+	return root.Size.Y / 2 + legs
+end
+
 -- Верхний регистр с поддержкой кириллицы (string.upper понимает только латиницу).
 function Util.upper(text: string): string
 	local out = {}
@@ -2183,7 +2347,7 @@ local Match = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
 
 local SHOT, PASS, LOB = Config.Shot, Config.Pass, Config.Lob
-local TACKLE, DASH, RES = Config.Tackle, Config.Dash, Config.Resonance
+local TACKLE, DASH, DRIBBLE, RES = Config.Tackle, Config.Dash, Config.Dribble, Config.Resonance
 
 local Actions = {}
 
@@ -2359,10 +2523,23 @@ function handlers.Dash(actor, direction)
 		return
 	end
 	Actors.setCooldown(actor, "Dash", DASH.Cooldown)
-	if actor.hasBall then
-		Actors.setImmune(actor, DASH.ImmuneTime) -- финт: подкат в этот момент не проходит
-	end
 	Net.fx("Dash", { character = actor.character, hasBall = actor.hasBall })
+end
+
+-- Дриблинг: финт с мячом. На короткое время игрока нельзя обокрасть подкатом.
+function handlers.Dribble(actor, direction)
+	local t = Actors.now()
+	if not ready(actor, t) or not actor.hasBall or not Actors.cooldownReady(actor, "Dribble", t) then
+		return
+	end
+	local dir = flatDir(direction, actor.root.CFrame.LookVector)
+	if not dir or not Actors.spendStamina(actor, DRIBBLE.Stamina) then
+		return
+	end
+	setCharging(actor, false)
+	Actors.setCooldown(actor, "Dribble", DRIBBLE.Cooldown)
+	Actors.setImmune(actor, DRIBBLE.ImmuneTime)
+	Net.fx("Dribble", { character = actor.character })
 end
 
 ---------------------------------------------------------------------------
@@ -2660,7 +2837,6 @@ function Actors.register(character: Model, info)
 
 	local data = info.data or { styleId = info.styleId or Styles.default, resonance = 0, cooldowns = {} }
 	local style = Styles.get(data.styleId)
-	local isR6 = humanoid.RigType == Enum.HumanoidRigType.R6
 	local staminaMax = P.MaxStamina * (style.stats.stamina or 1)
 
 	local actor = {
@@ -2675,7 +2851,7 @@ function Actors.register(character: Model, info)
 		side = Config.Teams[info.team].Side,
 		style = style,
 		alive = true,
-		groundOffset = root.Size.Y / 2 + (isR6 and 2 or humanoid.HipHeight),
+		groundOffset = Util.groundOffset(root, humanoid),
 
 		stamina = staminaMax,
 		staminaMax = staminaMax,
@@ -3560,11 +3736,13 @@ local keepers = {} -- [teamKey] = { actor, tracks, running, releaseAt, diveReady
 local spawning = {} -- [teamKey] = true, пока бот создаётся
 local thinkTimer = 0
 
--- Стандартные анимации R15 от Roblox (доступны в любой игре).
+-- Стандартные анимации Roblox (доступны в любой игре) для каждого типа аватара.
 local ANIMATION_IDS = {
-	idle = "rbxassetid://507766666",
-	run = "rbxassetid://507767714",
+	R6 = { idle = "rbxassetid://180435571", run = "rbxassetid://180426354" },
+	R15 = { idle = "rbxassetid://507766666", run = "rbxassetid://507767714" },
 }
+local RIG_NAME = Config.Avatar.RigType == "R15" and "R15" or "R6"
+local RIG_TYPE = RIG_NAME == "R15" and Enum.HumanoidRigType.R15 or Enum.HumanoidRigType.R6
 
 local function createRig(teamKey: string): Model?
 	local team = Config.Teams[teamKey]
@@ -3580,7 +3758,7 @@ local function createRig(teamKey: string): Model?
 	description.RightLegColor = dark
 
 	local ok, result = pcall(function()
-		return Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
+		return Players:CreateHumanoidModelFromDescription(description, RIG_TYPE)
 	end)
 	if not ok or typeof(result) ~= "Instance" then
 		warn("[Bots] не удалось создать вратаря: " .. tostring(result))
@@ -3642,7 +3820,7 @@ local function spawnKeeper(teamKey: string)
 		animator = created
 	end
 	local tracks = {}
-	for name, id in pairs(ANIMATION_IDS) do
+	for name, id in pairs(ANIMATION_IDS[RIG_NAME]) do
 		local animation = Instance.new("Animation")
 		animation.AnimationId = id
 		local ok, track = pcall(function()
@@ -4929,6 +5107,7 @@ return Physics
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -5021,6 +5200,42 @@ end
 
 PlayerService.addKit = addKit
 
+local WANTED_RIG = Config.Avatar.RigType == "R15" and Enum.HumanoidRigType.R15 or Enum.HumanoidRigType.R6
+
+-- Roblox создал персонажа не того типа (например R15, а игра рассчитана на R6):
+-- собираем такого же персонажа — с вещами и цветами игрока — на нужном скелете и подменяем.
+-- Возвращает true, если подмена удалась (тогда для нового персонажа сработает CharacterAdded).
+local function replaceRig(player: Player, character: Model, humanoid: Humanoid): boolean
+	local description: HumanoidDescription? = nil
+	pcall(function()
+		description = humanoid:GetAppliedDescription()
+	end)
+	local ok, result = pcall(function()
+		return Players:CreateHumanoidModelFromDescription(description or Instance.new("HumanoidDescription"), WANTED_RIG)
+	end)
+	if not ok or typeof(result) ~= "Instance" then
+		warn(
+			"[Players] не удалось пересобрать персонажа в "
+				.. Config.Avatar.RigType
+				.. ": "
+				.. tostring(result)
+		)
+		return false
+	end
+	-- Создание модели занимает время: за это время игрок мог выйти или его персонаж мог смениться.
+	if not dataByPlayer[player] or player.Character ~= character or not character.Parent then
+		result:Destroy()
+		return true
+	end
+	local model = result :: Model
+	model.Name = player.Name
+	model:PivotTo(character:GetPivot())
+	player.Character = model
+	model.Parent = Workspace
+	character:Destroy()
+	return true
+end
+
 local function onCharacter(player: Player, character: Model)
 	local data = dataByPlayer[player]
 	if not data then
@@ -5035,8 +5250,29 @@ local function onCharacter(player: Player, character: Model)
 		character.AncestryChanged:Wait()
 	end
 	task.wait(0.2) -- персонаж должен полностью собраться (HipHeight, аксессуары)
-	if player.Character ~= character or not character.Parent then
-		return
+	if not dataByPlayer[player] or player.Character ~= character or not character.Parent then
+		return -- игрок вышел или персонаж уже сменился
+	end
+
+	if Config.Avatar.ForceRig and humanoid.RigType ~= WANTED_RIG then
+		-- Страховка от зацикливания: если пересборка идёт слишком часто, перестаём её делать для этого игрока.
+		local now = os.clock()
+		if now - (data.lastRebuild or 0) > 15 then
+			data.rebuilds = 0
+		end
+		data.lastRebuild = now
+		data.rebuilds = (data.rebuilds or 0) + 1
+		if data.rebuilds <= 4 then
+			if replaceRig(player, character, humanoid) then
+				return
+			end
+		elseif data.rebuilds == 5 then
+			warn(
+				"[Players] пересборка персонажа отключена для "
+					.. player.Name
+					.. ": слишком частые повторы"
+			)
+		end
 	end
 
 	Physics.tagCharacter(character)
@@ -5050,6 +5286,15 @@ local function onCharacter(player: Player, character: Model)
 
 	humanoid.Died:Connect(function()
 		Actors.unregister(character)
+		-- Обычно Roblox возрождает игрока сам. Если этого не случилось (персонаж был собран нами вручную),
+		-- загружаем нового персонажа сами.
+		task.delay(Players.RespawnTime + 1.5, function()
+			if dataByPlayer[player] and player.Character == character then
+				pcall(function()
+					player:LoadCharacter()
+				end)
+			end
+		end)
 	end)
 	character.AncestryChanged:Connect(function(_, parent)
 		if not parent then
@@ -5114,6 +5359,7 @@ return PlayerService
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">40</float>
       <float name="CameraMinZoomDistance">6</float>
+      <token name="GameSettingsAvatar">0</token>
     </Properties>
     <Item class="StarterPlayerScripts" referent="29">
       <Properties>
@@ -5347,7 +5593,7 @@ local Util = require(Shared.Util)
 local ProcAnimator = require(script.Parent.ProcAnimator)
 local State = require(script.Parent.State)
 
-local SHOT, TACKLE, DASH = Config.Shot, Config.Tackle, Config.Dash
+local SHOT, TACKLE, DASH, DRIBBLE = Config.Shot, Config.Tackle, Config.Dash, Config.Dribble
 local CONTROLS = Config.Controls
 local R = Config.Ball.Radius
 
@@ -5487,22 +5733,15 @@ local function doPass(kind: string)
 end
 
 ---------------------------------------------------------------------------
--- Подкат и рывок
+-- Подкат, дриблинг и рывок
 ---------------------------------------------------------------------------
 
 local function doTackle()
-	if not canAct() then
-		return
-	end
-	if State.hasBall() then
-		deny("Tackle", "ПОДКАТ — ТОЛЬКО БЕЗ МЯЧА")
-		return
-	end
-	if locked("Tackle") or State.cooldown("Tackle") > 0 then
+	if not canAct() or locked("Tackle") or State.cooldown("Tackle") > 0 then
 		return
 	end
 	if State.stamina() < TACKLE.Stamina then
-		deny("Tackle", "НЕТ СИЛ")
+		deny("Action", "НЕТ СИЛ")
 		return
 	end
 	local root = State.root()
@@ -5518,6 +5757,39 @@ local function doTackle()
 	ProcAnimator.play(State.character(), "Slide")
 	face(direction, TACKLE.Duration)
 	State.send("Tackle", direction)
+end
+
+-- Дриблинг: короткий резкий уход с мячом в сторону движения. В этот момент подкат не проходит.
+local function doDribble()
+	if not canAct() or locked("Dribble") or State.cooldown("Dribble") > 0 then
+		return
+	end
+	if State.stamina() < DRIBBLE.Stamina then
+		deny("Action", "НЕТ СИЛ")
+		return
+	end
+	local root = State.root()
+	if not root then
+		return
+	end
+	local direction = moveDirection()
+	if direction.Magnitude < 0.1 then
+		direction = Util.flatUnit(root.CFrame.LookVector)
+	end
+	lock("Dribble", 0.5)
+	stopCharge(false)
+	Mover.dash(root, direction, DRIBBLE.Speed, DRIBBLE.Duration)
+	ProcAnimator.play(State.character(), "Dribble")
+	State.send("Dribble", direction)
+end
+
+-- Одна клавиша: с мячом — дриблинг, без мяча — подкат.
+local function doAction()
+	if State.hasBall() then
+		doDribble()
+	else
+		doTackle()
+	end
 end
 
 local function doDash()
@@ -5655,7 +5927,7 @@ local function updatePreview()
 	local direction = Controls.shotDirection()
 	local power = Util.lerp(SHOT.MinPower, SHOT.MaxPower, Controls.charge) * (style.stats.shot or 1)
 	local gravity = Workspace.Gravity * Config.Ball.GravityScale
-	local groundOffset = root.Size.Y / 2 + humanoid.HipHeight
+	local groundOffset = Util.groundOffset(root, humanoid)
 	local start = root.Position - Vector3.new(0, groundOffset - R, 0) + Util.flatUnit(direction) * Config.Ball.HoldDistance
 	local floor = FieldSpec.Origin.Y + R * 0.5
 	local landed = false
@@ -5734,7 +6006,7 @@ local TOUCH_LAYOUT = {
 	RS_Shoot = { "УДАР", UDim2.fromScale(0.52, 0.5) },
 	RS_Pass = { "ПАС", UDim2.fromScale(0.26, 0.62) },
 	RS_Lob = { "НАВЕС", UDim2.fromScale(0.26, 0.36) },
-	RS_Tackle = { "ПОДКАТ", UDim2.fromScale(0.52, 0.24) },
+	RS_Action = { "ОТБОР/ФИНТ", UDim2.fromScale(0.52, 0.24) },
 	RS_Dash = { "РЫВОК", UDim2.fromScale(0.78, 0.24) },
 	RS_Sprint = { "БЕГ", UDim2.fromScale(0.02, 0.5) },
 	RS_Ability1 = { "I", UDim2.fromScale(0.02, 0.1) },
@@ -5802,7 +6074,7 @@ function Controls.start()
 			doPass("Lob")
 		end)
 	)
-	bind("RS_Tackle", CONTROLS.Tackle, onPress(doTackle))
+	bind("RS_Action", CONTROLS.Action, onPress(doAction))
 	bind("RS_Dash", CONTROLS.Dash, onPress(doDash))
 	bind(
 		"RS_Ability1",
@@ -6169,8 +6441,9 @@ function Fx.afterimage(character: Model?, color: Color3, options: { [string]: an
 					clone.TextureID = ""
 					ghost = clone
 				else
+					-- Детали R6 — обычные блоки; голову рисуем кубиком поменьше (у неё сетка, а не форма детали).
 					local block = Instance.new("Part")
-					block.Size = source.Size
+					block.Size = name == "Head" and Vector3.new(1.25, 1.25, 1.25) or source.Size
 					ghost = block
 				end
 				ghost.Name = "Afterimage"
@@ -6222,6 +6495,9 @@ function Fx.charTrail(character: Model?, color: Color3, duration: number)
 	trail.Parent = torso
 
 	task.delay(duration, function()
+		if not trail.Parent then
+			return -- персонажа уже нет (респаун, выход) — шлейф удалился вместе с ним
+		end
 		trail.Enabled = false
 		Debris:AddItem(trail, 0.5)
 		Debris:AddItem(top, 0.5)
@@ -6509,11 +6785,26 @@ FxEvents.on("Dash", function(data)
 	if not Fx.isLocal(character) then
 		ProcAnimator.play(character, "Dash")
 	end
-	local color = styleColor(character)
 	Fx.sound("Dash", root)
-	Fx.afterimage(character, color, { time = 0.3 })
-	task.delay(0.08, function()
-		Fx.afterimage(character, color, { time = 0.3 })
+	Fx.burst(Fx.ground(root.Position), Color3.fromRGB(200, 226, 190), { count = 12, speed = 16, life = 0.35, size = 0.9 })
+	Fx.charTrail(character, styleColor(character), 0.3)
+end)
+
+FxEvents.on("Dribble", function(data)
+	local character = data.character
+	local root = Fx.rootOf(character)
+	if not root then
+		return
+	end
+	if not Fx.isLocal(character) then
+		ProcAnimator.play(character, "Dribble")
+	end
+	-- Послеобраз показывает, что в этот момент игрока не отобрать.
+	local color = styleColor(character)
+	Fx.sound("Dash", root, { pitch = 1.3, volume = 0.8 })
+	Fx.afterimage(character, color, { time = 0.35 })
+	task.delay(0.1, function()
+		Fx.afterimage(character, color, { time = 0.35 })
 	end)
 end)
 
@@ -7005,7 +7296,8 @@ end
 ---------------------------------------------------------------------------
 
 local slots = {} -- [key] = { frame, stroke, name, overlay, time, total }
-local slotOrder = { "Dash", "Tackle", "A1", "A2", "A3" }
+-- "Action" — контекстная клавиша: без мяча подкат, с мячом дриблинг.
+local slotOrder = { "Action", "Dash", "A1", "A2", "A3" }
 
 local function buildSlots()
 	local touch = UserInputService.TouchEnabled
@@ -7024,8 +7316,8 @@ local function buildSlots()
 	}, holder)
 
 	local keys = {
+		Action = keyName(Config.Controls.Action),
 		Dash = keyName(Config.Controls.Dash),
-		Tackle = keyName(Config.Controls.Tackle),
 		A1 = keyName(Config.Controls.Ability1),
 		A2 = keyName(Config.Controls.Ability2),
 		A3 = keyName(Config.Controls.Ability3),
@@ -7086,8 +7378,8 @@ local function buildSlots()
 
 	slots.Dash.name.Text = "РЫВОК"
 	slots.Dash.total = Config.Dash.Cooldown
-	slots.Tackle.name.Text = "ПОДКАТ"
-	slots.Tackle.total = Config.Tackle.Cooldown
+	slots.Action.name.Text = "ПОДКАТ"
+	slots.Action.total = Config.Tackle.Cooldown
 end
 
 -- Подписи и цвета слотов под текущий стиль.
@@ -7127,7 +7419,14 @@ local function updateSlots(hasBall: boolean, resonance: number)
 	local style = State.style()
 	for _, key in ipairs(slotOrder) do
 		local slot = slots[key]
-		local remaining = State.cooldown(key)
+		local cooldownKey = key
+		if key == "Action" then
+			-- Слот показывает то действие, которое сейчас сработает по этой клавише.
+			cooldownKey = hasBall and "Dribble" or "Tackle"
+			slot.total = hasBall and Config.Dribble.Cooldown or Config.Tackle.Cooldown
+			setText(slot.name, hasBall and "ДРИБЛИНГ" or "ПОДКАТ")
+		end
+		local remaining = State.cooldown(cooldownKey)
 		local fraction = math.clamp(remaining / math.max(slot.total, 0.01), 0, 1)
 		local label = ""
 		if remaining >= 10 then
@@ -7137,9 +7436,7 @@ local function updateSlots(hasBall: boolean, resonance: number)
 		end
 		local usable = remaining <= 0
 
-		if key == "Tackle" then
-			usable = usable and not hasBall
-		elseif key ~= "Dash" then
+		if key ~= "Action" and key ~= "Dash" then
 			local ability = style.abilities[tonumber(string.sub(key, 2)) :: number]
 			if not ability then
 				usable = false
@@ -7178,10 +7475,10 @@ local function buildHelp()
 		{ "WASD / Пробел", "движение, прыжок" },
 		{ keyName(c.Sprint), "бег (тратит силы)" },
 		{ keyName(c.Shoot) .. " (держать)", "удар: дольше — сильнее" },
+		{ keyName(c.Action), "подкат, а с мячом — дриблинг" },
 		{ keyName(c.Pass), "пас партнёру" },
 		{ keyName(c.Lob), "навес" },
-		{ keyName(c.Tackle), "подкат (без мяча)" },
-		{ keyName(c.Dash), "рывок / финт с мячом" },
+		{ keyName(c.Dash), "рывок" },
 		{ keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "способности стиля" },
 		{ keyName(c.Ability3), "ульта (полный Резонанс)" },
 		{ keyName(c.StyleMenu), "сменить стиль" },
@@ -7192,7 +7489,7 @@ local function buildHelp()
 		Name = "Help",
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 18, 1, -24),
-		Size = UDim2.fromOffset(300, 46 + #lines * 20),
+		Size = UDim2.fromOffset(340, 46 + #lines * 20),
 		BackgroundColor3 = PANEL,
 		BackgroundTransparency = 0.18,
 		BorderSizePixel = 0,
@@ -7709,7 +8006,7 @@ Hud.start()
         <Item class="ModuleScript" referent="37">
           <Properties>
             <string name="Name">ProcAnimator</string>
-            <string name="Source"><![CDATA[-- Проигрывает анимации из Shared/Animations на любом персонаже R15.
+            <string name="Source"><![CDATA[-- Проигрывает анимации из Shared/Animations на персонажах R6 и R15.
 -- Работает через Motor6D.Transform: каждый кадр (Stepped) мы подмешиваем свою позу
 -- поверх того, что выставил стандартный Animator (бег, стойка).
 
@@ -7723,63 +8020,88 @@ local AnimSampler = require(Shared.AnimSampler)
 local ProcAnimator = {}
 
 local JOINTS = {
-	Root = true,
-	Waist = true,
-	Neck = true,
-	RightShoulder = true,
-	RightElbow = true,
-	RightWrist = true,
-	LeftShoulder = true,
-	LeftElbow = true,
-	LeftWrist = true,
-	RightHip = true,
-	RightKnee = true,
-	RightAnkle = true,
-	LeftHip = true,
-	LeftKnee = true,
-	LeftAnkle = true,
+	R15 = {
+		"Root",
+		"Waist",
+		"Neck",
+		"RightShoulder",
+		"RightElbow",
+		"RightWrist",
+		"LeftShoulder",
+		"LeftElbow",
+		"LeftWrist",
+		"RightHip",
+		"RightKnee",
+		"RightAnkle",
+		"LeftHip",
+		"LeftKnee",
+		"LeftAnkle",
+	},
+	R6 = { "RootJoint", "Neck", "Right Shoulder", "Left Shoulder", "Right Hip", "Left Hip" },
 }
 
-local rigs = {} -- [Model] = { motors, count, tracks, written }
+local rigs = {} -- [Model] = { kind, motors, frames, count, tracks, written }
 
-local function findMotors(character: Model)
-	local motors = {}
+-- Тип аватара определяем по Humanoid, а если его нет — по именам суставов.
+local function detectKind(character: Model): string
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		return humanoid.RigType == Enum.HumanoidRigType.R6 and "R6" or "R15"
+	end
+	return character:FindFirstChild("Torso") and "R6" or "R15"
+end
+
+local function findMotors(character: Model, kind: string)
+	local wanted = {}
+	for _, name in ipairs(JOINTS[kind]) do
+		wanted[name] = true
+	end
+	local motors, frames = {}, {}
 	local count = 0
 	for _, descendant in ipairs(character:GetDescendants()) do
-		if descendant:IsA("Motor6D") and JOINTS[descendant.Name] and not motors[descendant.Name] then
+		if descendant:IsA("Motor6D") and wanted[descendant.Name] and not motors[descendant.Name] then
 			motors[descendant.Name] = descendant
+			-- У суставов R6 оси повёрнуты (C0 с поворотом). Позы заданы в осях персонажа,
+			-- поэтому перед записью в Transform переводим их в оси сустава.
+			local rotation = descendant.C0.Rotation
+			frames[descendant.Name] = { rotation = rotation, inverse = rotation:Inverse() }
 			count += 1
 		end
 	end
-	return motors, count
+	return motors, frames, count
 end
 
 local function getRig(character: Model)
 	local rig = rigs[character]
 	if not rig then
-		rig = { motors = {}, count = 0, tracks = {}, written = {} }
+		rig = { kind = detectKind(character), motors = {}, frames = {}, count = 0, tracks = {}, written = {} }
 		rigs[character] = rig
 	end
-	if rig.count < 12 then
-		rig.motors, rig.count = findMotors(character)
+	if rig.count < #JOINTS[rig.kind] - 3 then
+		rig.kind = detectKind(character)
+		rig.motors, rig.frames, rig.count = findMotors(character, rig.kind)
 	end
 	return rig
 end
 
 -- options: speed, weight, fadeIn, fadeOut
 function ProcAnimator.play(character: Model?, name: string, options: { [string]: number }?)
-	local anim = Animations[name]
-	if not anim or not character or not character.Parent then
+	if not character or not character.Parent then
 		return nil
 	end
 	local rig = getRig(character)
+	local anim = Animations.get(name, rig.kind)
+	if not anim then
+		return nil
+	end
 	for i = #rig.tracks, 1, -1 do
-		if rig.tracks[i].anim == anim then
+		if rig.tracks[i].name == name then
 			table.remove(rig.tracks, i)
 		end
 	end
 	local opts = options or {}
 	local track = {
+		name = name,
 		anim = anim,
 		time = 0,
 		elapsed = 0,
@@ -7811,9 +8133,8 @@ function ProcAnimator.stop(character: Model?, name: string)
 	if not rig then
 		return
 	end
-	local anim = Animations[name]
 	for _, track in ipairs(rig.tracks) do
-		if track.anim == anim then
+		if track.name == name then
 			track.stopping = true
 		end
 	end
@@ -7824,9 +8145,8 @@ function ProcAnimator.isPlaying(character: Model?, name: string): boolean
 	if not rig then
 		return false
 	end
-	local anim = Animations[name]
 	for _, track in ipairs(rig.tracks) do
-		if track.anim == anim and not track.stopping then
+		if track.name == name and not track.stopping then
 			return true
 		end
 	end
@@ -7883,10 +8203,13 @@ local function stepRig(rig, dt: number)
 		end
 		local result = base
 		local touched = false
+		local frame = rig.frames[name]
 		for _, track in ipairs(rig.tracks) do
 			local value = track.pose[name]
 			if value and track.weight > 0 then
-				result = result:Lerp(AnimSampler.toCFrame(value), track.weight)
+				local pivots = track.anim.pivots
+				local desired = AnimSampler.toCFrame(value, pivots and pivots[name])
+				result = result:Lerp(frame.inverse * desired * frame.rotation, track.weight)
 				touched = true
 			end
 		end

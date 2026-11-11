@@ -102,11 +102,26 @@ FxEvents.on("Dash", function(data)
 	if not Fx.isLocal(character) then
 		ProcAnimator.play(character, "Dash")
 	end
-	local color = styleColor(character)
 	Fx.sound("Dash", root)
-	Fx.afterimage(character, color, { time = 0.3 })
-	task.delay(0.08, function()
-		Fx.afterimage(character, color, { time = 0.3 })
+	Fx.burst(Fx.ground(root.Position), Color3.fromRGB(200, 226, 190), { count = 12, speed = 16, life = 0.35, size = 0.9 })
+	Fx.charTrail(character, styleColor(character), 0.3)
+end)
+
+FxEvents.on("Dribble", function(data)
+	local character = data.character
+	local root = Fx.rootOf(character)
+	if not root then
+		return
+	end
+	if not Fx.isLocal(character) then
+		ProcAnimator.play(character, "Dribble")
+	end
+	-- Послеобраз показывает, что в этот момент игрока не отобрать.
+	local color = styleColor(character)
+	Fx.sound("Dash", root, { pitch = 1.3, volume = 0.8 })
+	Fx.afterimage(character, color, { time = 0.35 })
+	task.delay(0.1, function()
+		Fx.afterimage(character, color, { time = 0.35 })
 	end)
 end)
 

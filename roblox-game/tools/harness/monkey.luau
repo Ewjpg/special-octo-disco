@@ -46,13 +46,14 @@ local matchState = ReplicatedStorage.MatchState
 
 local alice = Emu.addPlayer("Alice", 101)
 Emu.startClient(alice)
-local others = { Emu.addPlayer("Bob", 202), Emu.addPlayer("Carol", 303) }
+-- Части игроков Roblox «выдаёт» R15: сервер должен пересобирать их в R6.
+local others = { Emu.addPlayer("Bob", 202, "R15"), Emu.addPlayer("Carol", 303) }
 Emu.run(2)
 Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
 
 local CLIENT_ACTIONS =
-	{ "RS_Pass", "RS_Lob", "RS_Tackle", "RS_Dash", "RS_Ability1", "RS_Ability2", "RS_Ability3", "RS_StyleMenu", "RS_Help" }
-local SERVER_ACTIONS = { "Shoot", "Pass", "Lob", "Tackle", "Dash", "Ability", "Charge", "Sprint", "SelectStyle" }
+	{ "RS_Pass", "RS_Lob", "RS_Action", "RS_Dash", "RS_Ability1", "RS_Ability2", "RS_Ability3", "RS_StyleMenu", "RS_Help" }
+local SERVER_ACTIONS = { "Shoot", "Pass", "Lob", "Tackle", "Dribble", "Dash", "Ability", "Charge", "Sprint", "SelectStyle" }
 local styleIds = {}
 for _, style in ipairs(Styles.list) do
 	table.insert(styleIds, style.id)
@@ -164,7 +165,10 @@ Emu.run(duration, function()
 		end
 		player:Destroy()
 	elseif roll < 0.97 and #others < 3 then
-		table.insert(others, Emu.addPlayer("Guest" .. math.floor(rand() * 1000), 1000 + math.floor(rand() * 1000)))
+		table.insert(
+			others,
+			Emu.addPlayer("Guest" .. math.floor(rand() * 1000), 1000 + math.floor(rand() * 1000), rand() < 0.5 and "R15" or "R6")
+		)
 	end
 end)
 

@@ -16,7 +16,7 @@ local Util = require(Shared.Util)
 local ProcAnimator = require(script.Parent.ProcAnimator)
 local State = require(script.Parent.State)
 
-local SHOT, TACKLE, DASH = Config.Shot, Config.Tackle, Config.Dash
+local SHOT, TACKLE, DASH, DRIBBLE = Config.Shot, Config.Tackle, Config.Dash, Config.Dribble
 local CONTROLS = Config.Controls
 local R = Config.Ball.Radius
 
@@ -156,22 +156,15 @@ local function doPass(kind: string)
 end
 
 ---------------------------------------------------------------------------
--- Подкат и рывок
+-- Подкат, дриблинг и рывок
 ---------------------------------------------------------------------------
 
 local function doTackle()
-	if not canAct() then
-		return
-	end
-	if State.hasBall() then
-		deny("Tackle", "ПОДКАТ — ТОЛЬКО БЕЗ МЯЧА")
-		return
-	end
-	if locked("Tackle") or State.cooldown("Tackle") > 0 then
+	if not canAct() or locked("Tackle") or State.cooldown("Tackle") > 0 then
 		return
 	end
 	if State.stamina() < TACKLE.Stamina then
-		deny("Tackle", "НЕТ СИЛ")
+		deny("Action", "НЕТ СИЛ")
 		return
 	end
 	local root = State.root()
@@ -187,6 +180,39 @@ local function doTackle()
 	ProcAnimator.play(State.character(), "Slide")
 	face(direction, TACKLE.Duration)
 	State.send("Tackle", direction)
+end
+
+-- Дриблинг: короткий резкий уход с мячом в сторону движения. В этот момент подкат не проходит.
+local function doDribble()
+	if not canAct() or locked("Dribble") or State.cooldown("Dribble") > 0 then
+		return
+	end
+	if State.stamina() < DRIBBLE.Stamina then
+		deny("Action", "НЕТ СИЛ")
+		return
+	end
+	local root = State.root()
+	if not root then
+		return
+	end
+	local direction = moveDirection()
+	if direction.Magnitude < 0.1 then
+		direction = Util.flatUnit(root.CFrame.LookVector)
+	end
+	lock("Dribble", 0.5)
+	stopCharge(false)
+	Mover.dash(root, direction, DRIBBLE.Speed, DRIBBLE.Duration)
+	ProcAnimator.play(State.character(), "Dribble")
+	State.send("Dribble", direction)
+end
+
+-- Одна клавиша: с мячом — дриблинг, без мяча — подкат.
+local function doAction()
+	if State.hasBall() then
+		doDribble()
+	else
+		doTackle()
+	end
 end
 
 local function doDash()
@@ -324,7 +350,7 @@ local function updatePreview()
 	local direction = Controls.shotDirection()
 	local power = Util.lerp(SHOT.MinPower, SHOT.MaxPower, Controls.charge) * (style.stats.shot or 1)
 	local gravity = Workspace.Gravity * Config.Ball.GravityScale
-	local groundOffset = root.Size.Y / 2 + humanoid.HipHeight
+	local groundOffset = Util.groundOffset(root, humanoid)
 	local start = root.Position - Vector3.new(0, groundOffset - R, 0) + Util.flatUnit(direction) * Config.Ball.HoldDistance
 	local floor = FieldSpec.Origin.Y + R * 0.5
 	local landed = false
@@ -403,7 +429,7 @@ local TOUCH_LAYOUT = {
 	RS_Shoot = { "УДАР", UDim2.fromScale(0.52, 0.5) },
 	RS_Pass = { "ПАС", UDim2.fromScale(0.26, 0.62) },
 	RS_Lob = { "НАВЕС", UDim2.fromScale(0.26, 0.36) },
-	RS_Tackle = { "ПОДКАТ", UDim2.fromScale(0.52, 0.24) },
+	RS_Action = { "ОТБОР/ФИНТ", UDim2.fromScale(0.52, 0.24) },
 	RS_Dash = { "РЫВОК", UDim2.fromScale(0.78, 0.24) },
 	RS_Sprint = { "БЕГ", UDim2.fromScale(0.02, 0.5) },
 	RS_Ability1 = { "I", UDim2.fromScale(0.02, 0.1) },
@@ -471,7 +497,7 @@ function Controls.start()
 			doPass("Lob")
 		end)
 	)
-	bind("RS_Tackle", CONTROLS.Tackle, onPress(doTackle))
+	bind("RS_Action", CONTROLS.Action, onPress(doAction))
 	bind("RS_Dash", CONTROLS.Dash, onPress(doDash))
 	bind(
 		"RS_Ability1",

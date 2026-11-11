@@ -131,7 +131,7 @@ def render_stadium(parts, out_path, yaw, pitch, width, title, crop=None):
     print("saved", out_path, image.size, "faces:", len(faces))
 
 
-def render_animations(anims, out_path):
+def render_animations(anims, out_path, rig="R6"):
     """Два ряда на анимацию: вид сбоку (персонаж смотрит вправо) и вид спереди."""
     views = [("сбоку", camera_matrix(-90, 4)), ("спереди", camera_matrix(180, 4))]
     cell_w, cell_h, label_w = 132, 150, 150
@@ -141,7 +141,7 @@ def render_animations(anims, out_path):
     height = 64 + len(anims) * row_h
     image = Image.new("RGB", (width, height), (16, 18, 28))
     draw = ImageDraw.Draw(image)
-    draw.text((16, 10), "Анимации из Shared/Animations на блочном R15", fill=(235, 238, 248), font=font(18))
+    draw.text((16, 10), "Анимации из Shared/Animations на блочном %s" % rig, fill=(235, 238, 248), font=font(18))
     draw.text((16, 36), "верхний ряд — вид сбоку (лицом вправо), нижний — спереди; оранжевым выделена правая сторона тела", fill=(158, 164, 184), font=font(12))
     scale = 22
     body = (0.78, 0.8, 0.88)
@@ -180,7 +180,8 @@ def render_animations(anims, out_path):
 def main():
     src, dst = sys.argv[1], sys.argv[2]
     stadium = json.load(open(src + "/stadium.json", encoding="utf-8"))
-    anims = json.load(open(src + "/anims.json", encoding="utf-8"))
+    anims_r6 = json.load(open(src + "/anims-R6.json", encoding="utf-8"))
+    anims_r15 = json.load(open(src + "/anims-R15.json", encoding="utf-8"))
 
     def no_ground(p):
         return p["n"] != "Ground"
@@ -197,7 +198,8 @@ def main():
         return x > 60 and abs(z) < 70 and y < 30 and x < 150 and max(p["s"]) < 200
 
     render_stadium(stadium, dst + "/stadium-goal.png", 122, 16, 1400, "Ворота и штрафная (вид с поля)", crop=near_goal)
-    render_animations(anims, dst + "/animations.png")
+    render_animations(anims_r6, dst + "/animations.png", "R6")
+    render_animations(anims_r15, dst + "/animations-r15.png", "R15")
 
 
 if __name__ == "__main__":

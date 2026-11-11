@@ -1,15 +1,18 @@
--- Все анимации игры заданы кодом: ключевые позы суставов R15 в градусах.
+-- Все анимации игры заданы кодом: ключевые позы суставов в градусах.
 -- Их проигрывает клиентский ProcAnimator поверх стандартных анимаций ходьбы/бега.
 --
+-- Позы описаны для R15 (15 суставов). Для R6 (6 суставов) они пересчитываются автоматически,
+-- см. retarget ниже; если авто-поза не нравится, анимации можно дать поле r6 с позами вручную.
+--
 -- Формат сустава: { rx, ry, rz, px, py, pz } — поворот в градусах и (необязательно) смещение в студах.
--- Оси (персонаж смотрит вдоль -Z):
+-- Оси одинаковы для обоих типов аватара (персонаж смотрит вдоль -Z):
 --   +rx  нога/рука вперёд, корпус — назад      -rx  нога/рука назад, корпус — наклон вперёд
 --   +ry  поворот влево                          -ry  поворот вправо
 --   +rz  конечность вправо, корпус — влево      -rz  конечность влево, корпус — вправо
---   Колено сгибается через -rx, локоть — через +rx.
+--   Колено сгибается через -rx, локоть — через +rx (только R15).
 -- Сустав, не указанный ни в одном ключе анимации, остаётся под обычной анимацией Roblox.
 
-local Animations = {}
+local R15 = {}
 
 local function mirrorPose(pose)
 	local result = {}
@@ -56,7 +59,7 @@ local WINDUP = {
 }
 
 -- Замах, пока игрок держит кнопку удара.
-Animations.ChargeHold = {
+R15.ChargeHold = {
 	loop = true,
 	length = 0.7,
 	fadeIn = 0.14,
@@ -87,7 +90,7 @@ Animations.ChargeHold = {
 }
 
 -- Удар: начинается из замаха, нога выстреливает вперёд.
-Animations.Shoot = {
+R15.Shoot = {
 	length = 0.52,
 	fadeIn = 0.04,
 	fadeOut = 0.2,
@@ -135,7 +138,7 @@ Animations.Shoot = {
 }
 
 -- Усиленный удар для способностей: замах 0.2 с, затем выстрел.
-Animations.PowerShot = {
+R15.PowerShot = {
 	length = 0.7,
 	fadeIn = 0.06,
 	fadeOut = 0.22,
@@ -217,7 +220,7 @@ Animations.PowerShot = {
 }
 
 -- Пас щёчкой.
-Animations.Pass = {
+R15.Pass = {
 	length = 0.36,
 	fadeIn = 0.04,
 	fadeOut = 0.16,
@@ -266,7 +269,7 @@ Animations.Pass = {
 }
 
 -- Навес: подсечка мяча с отклонением назад.
-Animations.Lob = {
+R15.Lob = {
 	length = 0.46,
 	fadeIn = 0.04,
 	fadeOut = 0.18,
@@ -341,7 +344,7 @@ local SLIDE = {
 }
 
 -- Подкат: корпус отклонён назад, правая нога вытянута вперёд, левая согнута коленом вверх.
-Animations.Slide = {
+R15.Slide = {
 	length = 0.8,
 	fadeIn = 0.07,
 	fadeOut = 0.22,
@@ -368,7 +371,7 @@ local DASH_A = {
 }
 
 -- Рывок: корпус вперёд, руки отведены назад.
-Animations.Dash = {
+R15.Dash = {
 	length = 0.38,
 	fadeIn = 0.05,
 	fadeOut = 0.16,
@@ -396,7 +399,7 @@ Animations.Dash = {
 }
 
 -- Таран плечом (Бастион).
-Animations.Ram = {
+R15.Ram = {
 	length = 0.5,
 	fadeIn = 0.05,
 	fadeOut = 0.18,
@@ -439,7 +442,7 @@ Animations.Ram = {
 }
 
 -- Оглушение после отбора: шатается.
-Animations.Stun = {
+R15.Stun = {
 	length = 0.8,
 	fadeIn = 0.05,
 	fadeOut = 0.25,
@@ -483,12 +486,56 @@ Animations.Stun = {
 	},
 }
 
+-- Дриблинг (финт с мячом): качнулся в одну сторону — ушёл в другую.
+R15.Dribble = {
+	length = 0.4,
+	fadeIn = 0.04,
+	fadeOut = 0.16,
+	priority = 3,
+	keys = {
+		{
+			t = 0,
+			pose = {
+				Root = { -10, 0, -16 },
+				Waist = { -6, -12, 0 },
+				Neck = { 4, 14, 0 },
+				RightShoulder = { -30, 0, 44 },
+				RightElbow = { 30, 0, 0 },
+				LeftShoulder = { 34, 0, -54 },
+				LeftElbow = { 30, 0, 0 },
+				RightHip = { 34, 0, 12 },
+				RightKnee = { -44, 0, 0 },
+				LeftHip = { -16, 0, -12 },
+				LeftKnee = { -20, 0, 0 },
+			},
+		},
+		{
+			t = 0.16,
+			ease = "quadInOut",
+			pose = {
+				Root = { -14, 0, 14 },
+				Waist = { -8, 12, 0 },
+				Neck = { 4, -14, 0 },
+				RightShoulder = { 34, 0, 54 },
+				RightElbow = { 30, 0, 0 },
+				LeftShoulder = { -30, 0, -44 },
+				LeftElbow = { 30, 0, 0 },
+				RightHip = { -18, 0, 10 },
+				RightKnee = { -24, 0, 0 },
+				LeftHip = { 38, 0, -10 },
+				LeftKnee = { -48, 0, 0 },
+			},
+		},
+		{ t = 0.4, ease = "quadInOut", pose = REST },
+	},
+}
+
 ---------------------------------------------------------------------------
 -- Способности и эмоции
 ---------------------------------------------------------------------------
 
 -- Выброс руки вперёд (притяжение, барьер).
-Animations.Cast = {
+R15.Cast = {
 	length = 0.55,
 	fadeIn = 0.06,
 	fadeOut = 0.18,
@@ -532,7 +579,7 @@ Animations.Cast = {
 }
 
 -- Включение ульты: сжался — и раскрылся.
-Animations.PowerStance = {
+R15.PowerStance = {
 	length = 0.95,
 	fadeIn = 0.08,
 	fadeOut = 0.22,
@@ -593,7 +640,7 @@ Animations.PowerStance = {
 }
 
 -- Празднование гола: присел и выпрыгнул с руками вверх.
-Animations.Celebrate = {
+R15.Celebrate = {
 	length = 1.9,
 	fadeIn = 0.1,
 	fadeOut = 0.3,
@@ -672,7 +719,7 @@ Animations.Celebrate = {
 }
 
 -- Прыжок вратаря вправо (влево — зеркально).
-Animations.DiveRight = {
+R15.DiveRight = {
 	length = 0.75,
 	fadeIn = 0.06,
 	fadeOut = 0.25,
@@ -714,7 +761,7 @@ Animations.DiveRight = {
 		{ t = 0.75, ease = "quadInOut", pose = REST },
 	},
 }
-Animations.DiveLeft = mirror(Animations.DiveRight)
+R15.DiveLeft = mirror(R15.DiveRight)
 
 ---------------------------------------------------------------------------
 -- Подготовка: в каждом ключе должны быть все суставы анимации.
@@ -749,8 +796,99 @@ local function compile(name: string, anim)
 	end
 end
 
-for name, anim in pairs(Animations) do
+---------------------------------------------------------------------------
+-- R6: шесть суставов. Корпус цельный, локтей и коленей нет.
+---------------------------------------------------------------------------
+
+-- Корпус R6 вращаем вокруг линии бёдер (на 1 студ ниже центра), а не вокруг центра —
+-- иначе при наклоне ноги «уезжали» бы назад.
+local R6_PIVOTS = { RootJoint = { 0, -1, 0 } }
+
+-- Поза R15 -> поза R6.
+--   корпус   = таз + поясница
+--   плечо    = плечо + половина сгиба локтя
+--   бедро    = бедро + часть сгиба колена, минус поворот поясницы (в R6 ноги растут из цельного корпуса)
+-- Ноги R6 не гнутся, поэтому замах ограничен, а приседать можно только настолько, насколько ноги наклонены.
+local LEG_LENGTH = 2
+
+local function retargetPose(pose)
+	local function get(name: string)
+		return pose[name] or ZERO
+	end
+	local root, waist = get("Root"), get("Waist")
+	local torso = { root[1] + waist[1], root[2] + waist[2], root[3] + waist[3], root[4], root[5], root[6] }
+	local out = {}
+	if pose.Neck then
+		out.Neck = table.clone(pose.Neck)
+	end
+
+	-- Насколько можно опустить корпус, чтобы самая «вертикальная» нога не ушла под газон.
+	local straightest = 1
+	local hasLegs = false
+	for _, side in ipairs({ "Right", "Left" }) do
+		local shoulder = pose[side .. "Shoulder"]
+		if shoulder then
+			local elbow = get(side .. "Elbow")
+			out[side .. " Shoulder"] = { shoulder[1] + elbow[1] * 0.5, shoulder[2], shoulder[3], 0, 0, 0 }
+		end
+		local hip = pose[side .. "Hip"]
+		if hip then
+			local knee = get(side .. "Knee")
+			local rx = math.clamp(hip[1] + knee[1] * 0.2 - waist[1], -62, 112)
+			local ry, rz = hip[2] - waist[2], hip[3] - waist[3]
+			out[side .. " Hip"] = { rx, ry, rz, 0, 0, 0 }
+			local vertical = math.cos(math.rad(torso[1] + rx)) * math.cos(math.rad(torso[3] + rz))
+			if not hasLegs then
+				straightest = vertical
+				hasLegs = true
+			else
+				straightest = math.max(straightest, vertical)
+			end
+		end
+	end
+	if pose.Root or pose.Waist then
+		local lowest = LEG_LENGTH * math.max(straightest, 0) - LEG_LENGTH
+		torso[5] = math.max(torso[5], lowest)
+		out.RootJoint = torso
+	end
+	return out
+end
+
+local function retarget(anim)
+	local copy = table.clone(anim)
+	copy.r6 = nil
+	copy.pivots = R6_PIVOTS
+	copy.keys = {}
+	local source = anim.r6 and anim.r6.keys or nil
+	if source then
+		-- Позы R6 заданы вручную.
+		for i, key in ipairs(source) do
+			copy.keys[i] = { t = key.t, ease = key.ease, pose = key.pose }
+		end
+	else
+		for i, key in ipairs(anim.keys) do
+			copy.keys[i] = { t = key.t, ease = key.ease, pose = retargetPose(key.pose) }
+		end
+	end
+	return copy
+end
+
+local R6 = {}
+for name, anim in pairs(R15) do
 	compile(name, anim)
+end
+for name, anim in pairs(R15) do
+	local converted = retarget(anim)
+	compile(name, converted)
+	R6[name] = converted
+end
+
+local Animations = { R15 = R15, R6 = R6 }
+
+-- Анимация по имени для нужного типа аватара ("R6" или "R15").
+function Animations.get(name: string, rig: string?)
+	local set = rig == "R6" and R6 or R15
+	return set[name]
 end
 
 return Animations
