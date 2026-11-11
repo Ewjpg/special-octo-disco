@@ -33,3 +33,11 @@ python3 tools/build_web.py book/model.json book/stirner-edinstvennyi.html  # в�
 [EPUBCheck](https://github.com/w3c/epubcheck) без ошибок и предупреждений.
 
 `source/lib.ru-original.txt` — исходный текст в том виде, в каком он сохранён со страницы Lib.ru.
+
+---
+
+## В этом же репозитории: игра для Roblox
+
+В папке [`roblox-game/`](roblox-game/) лежит отдельный проект — аниме-футбол со стилями **RESONANCE**.
+Готовый файл для Roblox Studio: [`roblox-game/build/Resonance.rbxlx`](roblox-game/build/Resonance.rbxlx),
+инструкция — в [`roblox-game/README.md`](roblox-game/README.md).

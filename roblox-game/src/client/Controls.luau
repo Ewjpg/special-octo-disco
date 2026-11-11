@@ -495,7 +495,9 @@ function Controls.start()
 		end)
 	)
 
-	bind("RS_Sprint", CONTROLS.Sprint, function(_, inputState: Enum.UserInputState, input: InputObject)
+	-- Бег привязан с высоким приоритетом и «поглощает» клавишу: иначе Shift заодно
+	-- переключал бы стандартную блокировку камеры Roblox.
+	local function onSprint(_, inputState: Enum.UserInputState, input: InputObject)
 		local isTouch = input and input.UserInputType == Enum.UserInputType.Touch
 		if isTouch then
 			-- На телефоне бег — переключатель.
@@ -510,8 +512,21 @@ function Controls.start()
 			Controls.sprintHeld = false
 			State.send("Sprint", false)
 		end
-		return Enum.ContextActionResult.Pass
-	end)
+		return Enum.ContextActionResult.Sink
+	end
+	ContextActionService:BindActionAtPriority(
+		"RS_Sprint",
+		onSprint,
+		true,
+		Enum.ContextActionPriority.High.Value,
+		table.unpack(toInputs(CONTROLS.Sprint))
+	)
+	if UserInputService.TouchEnabled then
+		pcall(function()
+			ContextActionService:SetTitle("RS_Sprint", TOUCH_LAYOUT.RS_Sprint[1])
+			ContextActionService:SetPosition("RS_Sprint", TOUCH_LAYOUT.RS_Sprint[2])
+		end)
+	end
 
 	-- После респауна сервер создаёт персонажа заново: напоминаем, что бег зажат.
 	State.player.CharacterAdded:Connect(function()

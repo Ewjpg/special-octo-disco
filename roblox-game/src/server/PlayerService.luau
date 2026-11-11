@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Styles = require(Shared.Styles)
+local Util = require(Shared.Util)
 local Actors = require(script.Parent.Actors)
 local FieldBuilder = require(script.Parent.FieldBuilder)
 local Match = require(script.Parent.MatchService)
@@ -82,7 +83,7 @@ local function addKit(actor, displayName: string)
 
 	local function refreshStyle()
 		local style = Styles.get(character:GetAttribute("Style"))
-		styleLabel.Text = string.upper(style.name)
+		styleLabel.Text = Util.upper(style.name)
 		styleLabel.TextColor3 = style.color
 	end
 	refreshStyle()

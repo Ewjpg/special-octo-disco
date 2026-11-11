@@ -72,6 +72,22 @@ function Util.rightOf(dir: Vector3): Vector3
 	return Vector3.new(-d.Z, 0, d.X)
 end
 
+-- Верхний регистр с поддержкой кириллицы (string.upper понимает только латиницу).
+function Util.upper(text: string): string
+	local out = {}
+	for _, code in utf8.codes(text) do
+		if code >= 0x430 and code <= 0x44F then
+			code -= 0x20
+		elseif code == 0x451 then
+			code = 0x401 -- ё -> Ё
+		elseif code >= 97 and code <= 122 then
+			code -= 32
+		end
+		table.insert(out, utf8.char(code))
+	end
+	return table.concat(out)
+end
+
 function Util.easeOutQuad(t: number): number
 	return 1 - (1 - t) * (1 - t)
 end

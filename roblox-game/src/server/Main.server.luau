@@ -43,10 +43,12 @@ local function guarded(name: string, fn, ...)
 end
 
 RunService.Heartbeat:Connect(function(dt)
+	-- Порядок важен: сначала состояние игроков, затем мяч (он отпускает исчезнувшего владельца),
+	-- и только потом боты и отборы, которые смотрят, у кого мяч.
 	guarded("Actors", Actors.step, dt)
+	guarded("Ball", Ball.step, dt)
 	guarded("Bots", Bots.step, dt)
 	guarded("Actions", Actions.step)
-	guarded("Ball", Ball.step, dt)
 end)
 
 print(string.format("[%s] сервер запущен, RemoteEvents: %s", "Resonance", Net.Action:GetFullName()))

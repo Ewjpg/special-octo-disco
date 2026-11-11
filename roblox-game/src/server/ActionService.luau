@@ -362,6 +362,9 @@ function Actions.step()
 	end
 	local t = Actors.now()
 	local holder = Ball.holder
+	if holder and not holder.alive then
+		holder = nil -- владелец только что вышел или погиб: мяч освободит BallService
+	end
 	for _, actor in pairs(Actors.byCharacter) do
 		local slide = actor.slide
 		if slide then

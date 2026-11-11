@@ -457,6 +457,19 @@ local function installMocks()
 		end
 		Emu.bound[name] = handler
 	end)
+	roblox.implementMethod("ContextActionService", "BindActionAtPriority", function(_, name, handler, touchButton, priority, ...)
+		assert(
+			type(name) == "string" and type(handler) == "function" and type(touchButton) == "boolean",
+			"BindActionAtPriority: неверные аргументы"
+		)
+		assert(type(priority) == "number", "BindActionAtPriority: приоритет должен быть числом")
+		local inputs = table.pack(...)
+		assert(inputs.n > 0, "BindActionAtPriority " .. name .. ": нет ни одной клавиши")
+		for i = 1, inputs.n do
+			assert(typeof(inputs[i]) == "EnumItem", "BindActionAtPriority " .. name .. ": клавиша должна быть EnumItem")
+		end
+		Emu.bound[name] = handler
+	end)
 	roblox.implementMethod("ContextActionService", "UnbindAction", function(_, name)
 		Emu.bound[name] = nil
 	end)

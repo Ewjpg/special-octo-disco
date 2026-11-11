@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Styles = require(Shared.Styles)
+local Util = require(Shared.Util)
 local Controls = require(script.Parent.Controls)
 local FxEvents = require(script.Parent.FxEvents)
 local Sfx = require(script.Parent.Sfx)
@@ -431,7 +432,7 @@ local function refreshStyle()
 	for index = 1, 3 do
 		local slot = slots["A" .. index]
 		local ability = style.abilities[index]
-		slot.name.Text = ability and string.upper(ability.name) or "—"
+		slot.name.Text = ability and Util.upper(ability.name) or "—"
 		slot.total = ability and ability.cooldown or 1
 		slot.stroke.Color = style.color
 	end
@@ -600,7 +601,7 @@ local function chooseStyle(style)
 	Sfx.play("Click", nil)
 	if style.id ~= State.style().id then
 		State.send("SelectStyle", style.id)
-		Hud.banner(string.upper(style.name), style.tagline, style.color, 1.6)
+		Hud.banner(Util.upper(style.name), style.tagline, style.color, 1.6)
 	end
 	setMenu(false)
 end
@@ -627,7 +628,7 @@ local function buildStyleCard(style, parent: Instance, order: number)
 		Position = UDim2.fromOffset(14, 18),
 		Size = UDim2.new(1, -28, 0, 28),
 		Font = Enum.Font.GothamBlack,
-		Text = string.upper(style.name),
+		Text = Util.upper(style.name),
 		TextColor3 = style.color,
 		TextSize = 24,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -635,7 +636,7 @@ local function buildStyleCard(style, parent: Instance, order: number)
 	text({
 		Position = UDim2.fromOffset(14, 46),
 		Size = UDim2.new(1, -28, 0, 16),
-		Text = string.upper(style.role or ""),
+		Text = Util.upper(style.role or ""),
 		TextColor3 = MUTED,
 		TextSize = 11,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -853,7 +854,7 @@ local function onRender()
 	setText(phaseLabel, PHASE_TEXT[State.phase()] or "")
 
 	local style = State.style()
-	setText(styleButton, string.format("СТИЛЬ: %s  [%s]", string.upper(style.name), keyName(Config.Controls.StyleMenu)))
+	setText(styleButton, string.format("СТИЛЬ: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
 
 	-- Силы.
 	local maxStamina = State.player:GetAttribute("MaxStamina") or Config.Player.MaxStamina

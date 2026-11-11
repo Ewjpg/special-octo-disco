@@ -182,12 +182,15 @@ def main():
     stadium = json.load(open(src + "/stadium.json", encoding="utf-8"))
     anims = json.load(open(src + "/anims.json", encoding="utf-8"))
 
-    render_stadium(stadium, dst + "/stadium-top.png", 0, 90, 1800, "Стадион: вид сверху (ворота СОЛАР слева, НОКС справа)")
+    def no_ground(p):
+        return p["n"] != "Ground"
+
+    render_stadium(stadium, dst + "/stadium-top.png", 0, 90, 1500, "Стадион: вид сверху (ворота СОЛАР слева, НОКС справа)", crop=no_ground)
     def no_slabs(p):
         # огромная плита земли и козырьки закрывают обзор в простой проекции — на общем виде их не рисуем
         return p["n"] not in ("Ground", "Roof", "RoofLed")
 
-    render_stadium(stadium, dst + "/stadium-view.png", 32, 34, 1800, "Стадион: общий вид (без козырьков трибун)", crop=no_slabs)
+    render_stadium(stadium, dst + "/stadium-view.png", 32, 34, 1500, "Стадион: общий вид (без козырьков трибун)", crop=no_slabs)
 
     def near_goal(p):
         x, y, z = p["p"]
