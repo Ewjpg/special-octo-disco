@@ -471,8 +471,8 @@ local function buildLights(root: Instance)
 			local height = 96
 			local pole = newPart(lights, "Tower", Vector3.new(4, height, 4), at(xs * towerX, height / 2, zs * towerZ), DARK, Enum.Material.Metal)
 			pole.CanCollide = false
-			local head = at(xs * towerX, height + 4, zs * towerZ)
-			local panelCf = CFrame.lookAt(head.Position, O + Vector3.new(0, 0, 0))
+			local headPosition = O + Vector3.new(xs * towerX, height + 4, zs * towerZ)
+			local panelCf = CFrame.lookAt(headPosition, O)
 			decor(newPart(lights, "LampFrame", Vector3.new(30, 16, 2), panelCf, DARK, Enum.Material.Metal))
 			for row = -1, 1 do
 				for col = -3, 3 do
