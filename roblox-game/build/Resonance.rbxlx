@@ -1029,6 +1029,7 @@ Config.Match = {
 }
 
 Config.Player = {
+	Scale = 0.75, -- size of every character (players and goalkeepers), 1 = normal Roblox size
 	WalkSpeed = 22,
 	SprintSpeed = 32,
 	DribbleMult = 0.94, -- скорость с мячом
@@ -1040,23 +1041,23 @@ Config.Player = {
 }
 
 Config.Ball = {
-	Radius = 1.2,
+	Radius = 0.8,
 	GravityScale = 0.5, -- 1 = обычная гравитация Roblox, меньше = мяч летит дальше
 	GroundDrag = 0.55,
 	AirDrag = 0.1,
 	MaxSpeed = 330,
-	PickupRadius = 3.7,
-	PickupHeight = 6.2,
+	PickupRadius = 2.9,
+	PickupHeight = 4.8,
 	TrapMaxSpeed = 108, -- мяч быстрее этого нельзя принять, только отбить
 	TeammateTrapBonus = 1.4, -- партнёр принимает более быстрые мячи
-	HoldDistance = 2.5, -- на сколько мяч впереди игрока при ведении
+	HoldDistance = 1.9, -- на сколько мяч впереди игрока при ведении
 	KickNoPickup = 0.4,
 	BlockDamping = 0.34,
 }
 
 Config.Shot = {
-	MinPower = 70,
-	MaxPower = 155,
+	MinPower = 80,
+	MaxPower = 200,
 	ChargeTime = 0.85,
 	ChargeMoveMult = 0.55,
 	BaseElevation = 15, -- градусы, добавляются к наклону камеры
@@ -1065,18 +1066,18 @@ Config.Shot = {
 }
 
 Config.Pass = {
-	MinSpeed = 62,
-	MaxSpeed = 140,
+	MinSpeed = 70,
+	MaxSpeed = 175,
 	AssistAngle = 32, -- конус автонаведения на партнёра
-	MaxRange = 230,
+	MaxRange = 340,
 	Elevation = 3,
 }
 
 Config.Lob = {
 	Elevation = 40,
-	DefaultSpeed = 84,
+	DefaultSpeed = 105,
 	MinSpeed = 48,
-	MaxSpeed = 140,
+	MaxSpeed = 180,
 }
 
 Config.Tackle = {
@@ -1084,7 +1085,7 @@ Config.Tackle = {
 	Stamina = 16,
 	Duration = 0.5,
 	Speed = 46,
-	Radius = 4.8,
+	Radius = 3.8,
 	StunTime = 0.75,
 	KnockSpeed = 30,
 }
@@ -1119,9 +1120,9 @@ Config.Resonance = {
 Config.Bots = {
 	Goalkeepers = true,
 	KeeperSpeed = 23,
-	KeeperReach = 4.8, -- радиус, в котором вратарь ловит мяч
-	KeeperDiveReach = 6.4,
-	KeeperCatchSpeed = 128, -- быстрее — только отбивает (сильный заряженный удар вратарь не ловит)
+	KeeperReach = 3.9, -- радиус, в котором вратарь ловит мяч
+	KeeperDiveReach = 5.2,
+	KeeperCatchSpeed = 150, -- быстрее — только отбивает (сильный заряженный удар вратарь не ловит)
 	KeeperDiveSpeed = 40,
 	KeeperDiveCooldown = 1.5,
 	KeeperReaction = 0.2,
@@ -1184,14 +1185,14 @@ local FieldSpec = {}
 
 FieldSpec.Origin = Vector3.new(0, 0, 0)
 
-FieldSpec.Length = 380
-FieldSpec.Width = 240
+FieldSpec.Length = 600
+FieldSpec.Width = 380
 FieldSpec.HalfLength = FieldSpec.Length / 2
 FieldSpec.HalfWidth = FieldSpec.Width / 2
 
 -- Зона за линиями до бортов: мяч не уходит в аут, а отскакивает от борта.
-FieldSpec.EndMargin = 18
-FieldSpec.SideMargin = 12
+FieldSpec.EndMargin = 24
+FieldSpec.SideMargin = 16
 FieldSpec.WallHeight = 80
 
 FieldSpec.GoalWidth = 40
@@ -1199,14 +1200,14 @@ FieldSpec.GoalHeight = 14
 FieldSpec.GoalDepth = 10
 FieldSpec.PostRadius = 0.6
 
-FieldSpec.PenaltyDepth = 66
-FieldSpec.PenaltyWidth = 140
-FieldSpec.GoalAreaDepth = 24
-FieldSpec.GoalAreaWidth = 72
-FieldSpec.PenaltySpot = 44
-FieldSpec.PenaltyArc = 30
-FieldSpec.CenterRadius = 36
-FieldSpec.LineWidth = 1
+FieldSpec.PenaltyDepth = 100
+FieldSpec.PenaltyWidth = 210
+FieldSpec.GoalAreaDepth = 36
+FieldSpec.GoalAreaWidth = 108
+FieldSpec.PenaltySpot = 66
+FieldSpec.PenaltyArc = 45
+FieldSpec.CenterRadius = 55
+FieldSpec.LineWidth = 1.4
 
 -- Центр линии ворот на уровне газона. side: -1 или 1.
 function FieldSpec.goalCenter(side: number): Vector3
@@ -1582,9 +1583,15 @@ function Util.rightOf(dir: Vector3): Vector3
 	return Vector3.new(-d.Z, 0, d.X)
 end
 
--- Расстояние от центра HumanoidRootPart до земли. У R6 HipHeight равен 0, а ноги — 2 студа.
+-- Расстояние от центра HumanoidRootPart до земли. У R6 HipHeight равен 0, поэтому берётся длина ноги
+-- (2 студа у обычного персонажа, меньше у уменьшенного через Model:ScaleTo).
 function Util.groundOffset(root: BasePart, humanoid: Humanoid): number
-	local legs = humanoid.RigType == Enum.HumanoidRigType.R6 and 2 or humanoid.HipHeight
+	local legs = humanoid.HipHeight
+	if humanoid.RigType == Enum.HumanoidRigType.R6 then
+		local character = humanoid.Parent
+		local leg = character and character:FindFirstChild("Right Leg")
+		legs = leg and leg:IsA("BasePart") and leg.Size.Y or 2
+	end
 	return root.Size.Y / 2 + legs
 end
 
@@ -3088,6 +3095,9 @@ local function spawnKeeper(teamKey: string)
 		animate:Destroy()
 	end
 
+	if Config.Player.Scale ~= 1 then
+		model:ScaleTo(Config.Player.Scale)
+	end
 	local spot = F.fromOwnGoal(team.Side, 5, 0) + Vector3.new(0, 4, 0)
 	model:PivotTo(CFrame.lookAt(spot, spot + F.attackDir(team.Side)))
 	model.Parent = Workspace
@@ -4027,12 +4037,12 @@ local function setupLighting()
 	sky.Parent = Lighting
 
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.18
-	atmosphere.Offset = 0.05
+	atmosphere.Density = 0.08
+	atmosphere.Offset = 0
 	atmosphere.Color = Color3.fromRGB(184, 196, 214)
 	atmosphere.Decay = Color3.fromRGB(104, 118, 146)
 	atmosphere.Glare = 0.2
-	atmosphere.Haze = 0.6
+	atmosphere.Haze = 0.3
 	atmosphere.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
@@ -4582,7 +4592,8 @@ local function addKit(actor, displayName: string)
 	local ring = Instance.new("Part")
 	ring.Name = "TeamRing"
 	ring.Shape = Enum.PartType.Cylinder
-	ring.Size = Vector3.new(0.12, 5.2, 5.2)
+	local ringSize = 5.2 * Config.Player.Scale
+	ring.Size = Vector3.new(0.12, ringSize, ringSize)
 	ring.Material = Enum.Material.Neon
 	ring.Color = team.Color
 	ring.Transparency = 0.55
@@ -4708,6 +4719,10 @@ local function onCharacter(player: Player, character: Model)
 		end
 	end
 
+	-- Все персонажи уменьшены (Config.Player.Scale): поле кажется больше, а путь до ворот дольше.
+	if Config.Player.Scale ~= 1 then
+		character:ScaleTo(Config.Player.Scale)
+	end
 	Physics.tagCharacter(character)
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 
@@ -4832,9 +4847,9 @@ local marker: BillboardGui? = nil
 local rings = {} -- круги вокруг игрока с мячом: от внешнего к внутреннему
 local RINGS = {
 	-- радиус, прозрачность, цвет
-	{ 11, 0.82, Color3.fromRGB(200, 236, 200) },
-	{ 7.5, 0.78, Color3.fromRGB(176, 220, 176) },
-	{ 4.2, 0.7, Color3.fromRGB(150, 200, 150) },
+	{ 8.4, 0.82, Color3.fromRGB(200, 236, 200) },
+	{ 5.7, 0.78, Color3.fromRGB(176, 220, 176) },
+	{ 3.2, 0.7, Color3.fromRGB(150, 200, 150) },
 }
 local trailMode: any = nil -- false = обычный шлейф, Color3 = цветной шлейф способности
 local rollAngle = 0
@@ -7566,6 +7581,9 @@ local function getRig(character: Model)
 		rig = { kind = detectKind(character), motors = {}, frames = {}, count = 0, tracks = {}, written = {}, assets = {} }
 		rigs[character] = rig
 	end
+	-- Персонаж мог быть уменьшен (Model:ScaleTo): смещения в позах масштабируем так же.
+	local root = character:FindFirstChild("HumanoidRootPart")
+	rig.scale = root and root:IsA("BasePart") and root.Size.Y / 2 or 1
 	if rig.count < #JOINTS[rig.kind] - 3 then
 		rig.kind = detectKind(character)
 		rig.motors, rig.frames, rig.count = findMotors(character, rig.kind)
@@ -7745,7 +7763,15 @@ local function stepRig(rig, dt: number)
 			local value = track.pose[name]
 			if value and track.weight > 0 then
 				local pivots = track.anim.pivots
-				local desired = AnimSampler.toCFrame(value, pivots and pivots[name])
+				local pivot = pivots and pivots[name]
+				local s = rig.scale or 1
+				if s ~= 1 then
+					value = { value[1], value[2], value[3], value[4] * s, value[5] * s, value[6] * s }
+					if pivot then
+						pivot = { pivot[1] * s, pivot[2] * s, pivot[3] * s }
+					end
+				end
+				local desired = AnimSampler.toCFrame(value, pivot)
 				result = result:Lerp(frame.inverse * desired * frame.rotation, track.weight)
 				touched = true
 			end

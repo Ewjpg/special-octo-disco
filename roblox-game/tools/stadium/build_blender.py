@@ -122,8 +122,10 @@ for c in chunks:
 print(f"[stadium] {len(chunks)} objects, {sum(len(c['tris']) for c in chunks)} triangles")
 
 # --- context only: pitch stripes, lines, goals, boards ---------------------------
-HL, HW = 190.0, 120.0
-ARENA_X, ARENA_Z = 208.0, 132.0
+HL, HW = geometry.HL, geometry.HW
+ARENA_X, ARENA_Z = geometry.ARENA_X, geometry.ARENA_Z
+PD, PW = geometry.FIELD["PenaltyDepth"], geometry.FIELD["PenaltyWidth"]
+GW, GH = geometry.FIELD["GoalWidth"], geometry.FIELD["GoalHeight"]
 
 
 def box(name, size_r, center_r, mat):
@@ -157,11 +159,11 @@ for (sx, sz, cx, cz) in [(2 * HL, 1, 0, -HW), (2 * HL, 1, 0, HW), (1, 2 * HW, -H
     box("line", (sx, 0.1, sz), (cx, 0.03, cz), white)
 for s in (-1, 1):
     gx = s * HL
-    for (sx, sz, cx, cz) in [(66, 1, gx - s * 33, -70), (66, 1, gx - s * 33, 70), (1, 140, gx - s * 66, 0)]:
+    for (sx, sz, cx, cz) in [(PD, 1, gx - s * PD / 2, -PW / 2), (PD, 1, gx - s * PD / 2, PW / 2), (1, PW, gx - s * PD, 0)]:
         box("line", (sx, 0.1, sz), (cx, 0.03, cz), white)
-    for z in (-20, 20):
-        box("post", (1.2, 14, 1.2), (gx, 7, z), white)
-    box("bar", (1.2, 1.2, 41), (gx, 14, 0), white)
+    for z in (-GW / 2, GW / 2):
+        box("post", (1.2, GH, 1.2), (gx, GH / 2, z), white)
+    box("bar", (1.2, 1.2, GW + 1), (gx, GH, 0), white)
 for zs in (-1, 1):
     box("board", (ARENA_X, 4.5, 2), (-ARENA_X / 2, 2.25, zs * (ARENA_Z + 1)), board_home)
     box("board", (ARENA_X, 4.5, 2), (ARENA_X / 2, 2.25, zs * (ARENA_Z + 1)), board_away)
@@ -217,10 +219,10 @@ if RENDER:
     scene.view_settings.look = "AgX - Base Contrast"
 
     views = [
-        ("preview_broadcast", (0, 70, 250), (0, 10, -40), 22),
-        ("preview_aerial", (520, 420, 520), (0, 20, 0), 28),
-        ("preview_pitch", (-150, 6, 0), (140, 40, -60), 18),
-        ("preview_goal", (-120, 14, -60), (-200, 30, 40), 20),
+        ("preview_broadcast", (0, 80, ARENA_Z + 120), (0, 10, -HW * 0.3), 22),
+        ("preview_aerial", (geometry.A0 * 2.2, 560, geometry.B0 * 2.6), (0, 20, 0), 28),
+        ("preview_pitch", (-HL * 0.8, 5, 0), (HL * 0.75, 40, -HW * 0.5), 18),
+        ("preview_goal", (-HL * 0.6, 12, -HW * 0.5), (-HL - 10, 30, HW * 0.3), 20),
     ]
     for name, pos, target, lens in views:
         scene.camera = camera(name, pos, target, lens)

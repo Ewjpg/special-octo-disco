@@ -25,9 +25,9 @@ local marker: BillboardGui? = nil
 local rings = {} -- круги вокруг игрока с мячом: от внешнего к внутреннему
 local RINGS = {
 	-- радиус, прозрачность, цвет
-	{ 11, 0.82, Color3.fromRGB(200, 236, 200) },
-	{ 7.5, 0.78, Color3.fromRGB(176, 220, 176) },
-	{ 4.2, 0.7, Color3.fromRGB(150, 200, 150) },
+	{ 8.4, 0.82, Color3.fromRGB(200, 236, 200) },
+	{ 5.7, 0.78, Color3.fromRGB(176, 220, 176) },
+	{ 3.2, 0.7, Color3.fromRGB(150, 200, 150) },
 }
 local trailMode: any = nil -- false = обычный шлейф, Color3 = цветной шлейф способности
 local rollAngle = 0

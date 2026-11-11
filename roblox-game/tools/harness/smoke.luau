@@ -202,6 +202,25 @@ else
 end
 check("персонаж игрока — R6", alice.Character.Humanoid.RigType == Enum.HumanoidRigType.R6)
 do
+	local root = alice.Character.HumanoidRootPart
+	local leg = alice.Character:FindFirstChild("Right Leg")
+	local want = 2 * Config.Player.Scale
+	check(
+		"персонаж уменьшен",
+		math.abs(root.Size.Y - want) < 0.01 and leg and math.abs(leg.Size.Y - want) < 0.01,
+		string.format("рост корня %.2f", root.Size.Y)
+	)
+	Emu.run(0.2)
+	local feet = root.CFrame.Position.Y - Actors.ofPlayer(alice).groundOffset
+	check(
+		"уменьшенный персонаж стоит на газоне",
+		math.abs(feet) < 0.15,
+		string.format("ступни на %.2f", feet)
+	)
+	check("мяч маленький", math.abs(ballPart().Size.X - Config.Ball.Radius * 2) < 0.01, ballPart().Size.X)
+	check("поле 600×380", F.Length == 600 and F.Width == 380, string.format("%d×%d", F.Length, F.Width))
+end
+do
 	local r6Keepers = 0
 	for _, actor in pairs(Actors.byCharacter) do
 		if actor.isKeeper and actor.humanoid.RigType == Enum.HumanoidRigType.R6 then
@@ -291,7 +310,8 @@ check("мяч выбит", not hasBall(alice))
 local shotSpeed = ballPart().AssemblyLinearVelocity.Magnitude
 check(
 	"скорость удара в разумных пределах",
-	shotSpeed > 80 and shotSpeed < 170,
+	-- Between the weakest shot and the strongest one a style multiplier (up to x1.25) allows.
+	shotSpeed > Config.Shot.MinPower * 0.9 and shotSpeed < Config.Shot.MaxPower * 1.25,
 	string.format("%.1f", shotSpeed)
 )
 

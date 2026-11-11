@@ -23,6 +23,7 @@ Config.Match = {
 }
 
 Config.Player = {
+	Scale = 0.75, -- size of every character (players and goalkeepers), 1 = normal Roblox size
 	WalkSpeed = 22,
 	SprintSpeed = 32,
 	DribbleMult = 0.94, -- скорость с мячом
@@ -34,23 +35,23 @@ Config.Player = {
 }
 
 Config.Ball = {
-	Radius = 1.2,
+	Radius = 0.8,
 	GravityScale = 0.5, -- 1 = обычная гравитация Roblox, меньше = мяч летит дальше
 	GroundDrag = 0.55,
 	AirDrag = 0.1,
 	MaxSpeed = 330,
-	PickupRadius = 3.7,
-	PickupHeight = 6.2,
+	PickupRadius = 2.9,
+	PickupHeight = 4.8,
 	TrapMaxSpeed = 108, -- мяч быстрее этого нельзя принять, только отбить
 	TeammateTrapBonus = 1.4, -- партнёр принимает более быстрые мячи
-	HoldDistance = 2.5, -- на сколько мяч впереди игрока при ведении
+	HoldDistance = 1.9, -- на сколько мяч впереди игрока при ведении
 	KickNoPickup = 0.4,
 	BlockDamping = 0.34,
 }
 
 Config.Shot = {
-	MinPower = 70,
-	MaxPower = 155,
+	MinPower = 80,
+	MaxPower = 200,
 	ChargeTime = 0.85,
 	ChargeMoveMult = 0.55,
 	BaseElevation = 15, -- градусы, добавляются к наклону камеры
@@ -59,18 +60,18 @@ Config.Shot = {
 }
 
 Config.Pass = {
-	MinSpeed = 62,
-	MaxSpeed = 140,
+	MinSpeed = 70,
+	MaxSpeed = 175,
 	AssistAngle = 32, -- конус автонаведения на партнёра
-	MaxRange = 230,
+	MaxRange = 340,
 	Elevation = 3,
 }
 
 Config.Lob = {
 	Elevation = 40,
-	DefaultSpeed = 84,
+	DefaultSpeed = 105,
 	MinSpeed = 48,
-	MaxSpeed = 140,
+	MaxSpeed = 180,
 }
 
 Config.Tackle = {
@@ -78,7 +79,7 @@ Config.Tackle = {
 	Stamina = 16,
 	Duration = 0.5,
 	Speed = 46,
-	Radius = 4.8,
+	Radius = 3.8,
 	StunTime = 0.75,
 	KnockSpeed = 30,
 }
@@ -113,9 +114,9 @@ Config.Resonance = {
 Config.Bots = {
 	Goalkeepers = true,
 	KeeperSpeed = 23,
-	KeeperReach = 4.8, -- радиус, в котором вратарь ловит мяч
-	KeeperDiveReach = 6.4,
-	KeeperCatchSpeed = 128, -- быстрее — только отбивает (сильный заряженный удар вратарь не ловит)
+	KeeperReach = 3.9, -- радиус, в котором вратарь ловит мяч
+	KeeperDiveReach = 5.2,
+	KeeperCatchSpeed = 150, -- быстрее — только отбивает (сильный заряженный удар вратарь не ловит)
 	KeeperDiveSpeed = 40,
 	KeeperDiveCooldown = 1.5,
 	KeeperReaction = 0.2,

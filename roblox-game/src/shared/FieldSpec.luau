@@ -5,14 +5,14 @@ local FieldSpec = {}
 
 FieldSpec.Origin = Vector3.new(0, 0, 0)
 
-FieldSpec.Length = 380
-FieldSpec.Width = 240
+FieldSpec.Length = 600
+FieldSpec.Width = 380
 FieldSpec.HalfLength = FieldSpec.Length / 2
 FieldSpec.HalfWidth = FieldSpec.Width / 2
 
 -- Зона за линиями до бортов: мяч не уходит в аут, а отскакивает от борта.
-FieldSpec.EndMargin = 18
-FieldSpec.SideMargin = 12
+FieldSpec.EndMargin = 24
+FieldSpec.SideMargin = 16
 FieldSpec.WallHeight = 80
 
 FieldSpec.GoalWidth = 40
@@ -20,14 +20,14 @@ FieldSpec.GoalHeight = 14
 FieldSpec.GoalDepth = 10
 FieldSpec.PostRadius = 0.6
 
-FieldSpec.PenaltyDepth = 66
-FieldSpec.PenaltyWidth = 140
-FieldSpec.GoalAreaDepth = 24
-FieldSpec.GoalAreaWidth = 72
-FieldSpec.PenaltySpot = 44
-FieldSpec.PenaltyArc = 30
-FieldSpec.CenterRadius = 36
-FieldSpec.LineWidth = 1
+FieldSpec.PenaltyDepth = 100
+FieldSpec.PenaltyWidth = 210
+FieldSpec.GoalAreaDepth = 36
+FieldSpec.GoalAreaWidth = 108
+FieldSpec.PenaltySpot = 66
+FieldSpec.PenaltyArc = 45
+FieldSpec.CenterRadius = 55
+FieldSpec.LineWidth = 1.4
 
 -- Центр линии ворот на уровне газона. side: -1 или 1.
 function FieldSpec.goalCenter(side: number): Vector3

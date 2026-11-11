@@ -73,6 +73,9 @@ local function getRig(character: Model)
 		rig = { kind = detectKind(character), motors = {}, frames = {}, count = 0, tracks = {}, written = {}, assets = {} }
 		rigs[character] = rig
 	end
+	-- Персонаж мог быть уменьшен (Model:ScaleTo): смещения в позах масштабируем так же.
+	local root = character:FindFirstChild("HumanoidRootPart")
+	rig.scale = root and root:IsA("BasePart") and root.Size.Y / 2 or 1
 	if rig.count < #JOINTS[rig.kind] - 3 then
 		rig.kind = detectKind(character)
 		rig.motors, rig.frames, rig.count = findMotors(character, rig.kind)
@@ -252,7 +255,15 @@ local function stepRig(rig, dt: number)
 			local value = track.pose[name]
 			if value and track.weight > 0 then
 				local pivots = track.anim.pivots
-				local desired = AnimSampler.toCFrame(value, pivots and pivots[name])
+				local pivot = pivots and pivots[name]
+				local s = rig.scale or 1
+				if s ~= 1 then
+					value = { value[1], value[2], value[3], value[4] * s, value[5] * s, value[6] * s }
+					if pivot then
+						pivot = { pivot[1] * s, pivot[2] * s, pivot[3] * s }
+					end
+				end
+				local desired = AnimSampler.toCFrame(value, pivot)
 				result = result:Lerp(frame.inverse * desired * frame.rotation, track.weight)
 				touched = true
 			end

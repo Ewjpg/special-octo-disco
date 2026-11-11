@@ -701,12 +701,12 @@ local function setupLighting()
 	sky.Parent = Lighting
 
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.18
-	atmosphere.Offset = 0.05
+	atmosphere.Density = 0.08
+	atmosphere.Offset = 0
 	atmosphere.Color = Color3.fromRGB(184, 196, 214)
 	atmosphere.Decay = Color3.fromRGB(104, 118, 146)
 	atmosphere.Glare = 0.2
-	atmosphere.Haze = 0.6
+	atmosphere.Haze = 0.3
 	atmosphere.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")

@@ -82,6 +82,9 @@ local function spawnKeeper(teamKey: string)
 		animate:Destroy()
 	end
 
+	if Config.Player.Scale ~= 1 then
+		model:ScaleTo(Config.Player.Scale)
+	end
 	local spot = F.fromOwnGoal(team.Side, 5, 0) + Vector3.new(0, 4, 0)
 	model:PivotTo(CFrame.lookAt(spot, spot + F.attackDir(team.Side)))
 	model.Parent = Workspace

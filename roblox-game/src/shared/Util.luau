@@ -72,9 +72,15 @@ function Util.rightOf(dir: Vector3): Vector3
 	return Vector3.new(-d.Z, 0, d.X)
 end
 
--- Расстояние от центра HumanoidRootPart до земли. У R6 HipHeight равен 0, а ноги — 2 студа.
+-- Расстояние от центра HumanoidRootPart до земли. У R6 HipHeight равен 0, поэтому берётся длина ноги
+-- (2 студа у обычного персонажа, меньше у уменьшенного через Model:ScaleTo).
 function Util.groundOffset(root: BasePart, humanoid: Humanoid): number
-	local legs = humanoid.RigType == Enum.HumanoidRigType.R6 and 2 or humanoid.HipHeight
+	local legs = humanoid.HipHeight
+	if humanoid.RigType == Enum.HumanoidRigType.R6 then
+		local character = humanoid.Parent
+		local leg = character and character:FindFirstChild("Right Leg")
+		legs = leg and leg:IsA("BasePart") and leg.Size.Y or 2
+	end
 	return root.Size.Y / 2 + legs
 end
 

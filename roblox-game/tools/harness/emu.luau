@@ -337,6 +337,28 @@ local function installMocks()
 		return data(self).networkOwner
 	end)
 	roblox.implementMethod("PVInstance", "PivotTo", movePivot)
+	-- Model:ScaleTo / GetScale: scale part sizes, positions around the pivot, joint offsets and HipHeight.
+	roblox.implementMethod("Model", "GetScale", function(self)
+		return data(self).scale or 1
+	end)
+	roblox.implementMethod("Model", "ScaleTo", function(self, scale)
+		assert(type(scale) == "number" and scale > 0, "ScaleTo: scale must be a positive number")
+		local factor = scale / (data(self).scale or 1)
+		data(self).scale = scale
+		local pivot = modelPivot(self)
+		for _, d in ipairs(self:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.Size = d.Size * factor
+				local rel = pivot:ToObjectSpace(d.CFrame)
+				d.CFrame = pivot * (CFrame.new(rel.Position * factor) * rel.Rotation)
+			elseif d:IsA("Motor6D") then
+				d.C0 = CFrame.new(d.C0.Position * factor) * d.C0.Rotation
+				d.C1 = CFrame.new(d.C1.Position * factor) * d.C1.Rotation
+			elseif d:IsA("Humanoid") then
+				d.HipHeight = d.HipHeight * factor
+			end
+		end
+	end)
 	roblox.implementMethod("PVInstance", "GetPivot", function(self)
 		if self:IsA("BasePart") then
 			return self.CFrame
@@ -1037,7 +1059,11 @@ local function stepCharacters(dt: number)
 		local target = position + velocity * dt
 		local maxX = FIELD.HalfLength + FIELD.EndMargin - 2
 		local maxZ = FIELD.HalfWidth + FIELD.SideMargin - 2
-		target = Vector3.new(math.clamp(target.X, -maxX, maxX), Emu.HIP_HEIGHT + 1, math.clamp(target.Z, -maxZ, maxZ))
+		-- Root height above the grass: legs (R6) or HipHeight (R15) plus half the root, so scaled rigs stand on the ground.
+		local leg = model:FindFirstChild("Right Leg")
+		local legs = leg and leg.Size.Y or humanoid.HipHeight
+		local rootY = legs + root.Size.Y / 2
+		target = Vector3.new(math.clamp(target.X, -maxX, maxX), rootY, math.clamp(target.Z, -maxZ, maxZ))
 
 		local rotation = root.CFrame.Rotation
 		if humanoid.AutoRotate and direction.Magnitude > 0.1 then

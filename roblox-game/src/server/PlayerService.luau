@@ -36,7 +36,8 @@ local function addKit(actor, displayName: string)
 	local ring = Instance.new("Part")
 	ring.Name = "TeamRing"
 	ring.Shape = Enum.PartType.Cylinder
-	ring.Size = Vector3.new(0.12, 5.2, 5.2)
+	local ringSize = 5.2 * Config.Player.Scale
+	ring.Size = Vector3.new(0.12, ringSize, ringSize)
 	ring.Material = Enum.Material.Neon
 	ring.Color = team.Color
 	ring.Transparency = 0.55
@@ -162,6 +163,10 @@ local function onCharacter(player: Player, character: Model)
 		end
 	end
 
+	-- Все персонажи уменьшены (Config.Player.Scale): поле кажется больше, а путь до ворот дольше.
+	if Config.Player.Scale ~= 1 then
+		character:ScaleTo(Config.Player.Scale)
+	end
 	Physics.tagCharacter(character)
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 

@@ -18,12 +18,25 @@ import math
 
 import numpy as np
 
-# Pitch boundary from Shared/FieldSpec: HalfLength 190 + EndMargin 18, HalfWidth 120 + SideMargin 12.
-ARENA_X, ARENA_Z = 208.0, 132.0
+def _read_fieldspec() -> dict[str, float]:
+    """Pitch numbers straight from the game's Shared/FieldSpec.luau, so the bowl always fits the pitch."""
+    import re
+    from pathlib import Path
 
-# Inner edge of the stands: a superellipse that clears the arena's corners.
-A0, B0, EXPONENT = 238.0, 162.0, 4.0
-SEGMENTS = 320  # around the bowl
+    path = Path(__file__).resolve().parents[2] / "src" / "shared" / "FieldSpec.luau"
+    text = path.read_text(encoding="utf-8")
+    return {k: float(v) for k, v in re.findall(r"^FieldSpec\.(\w+) = ([\d.]+)\s*$", text, re.M)}
+
+
+FIELD = _read_fieldspec()
+HL, HW = FIELD["Length"] / 2, FIELD["Width"] / 2
+# Pitch boundary (the boards): half length/width plus the run-off margins.
+ARENA_X, ARENA_Z = HL + FIELD["EndMargin"], HW + FIELD["SideMargin"]
+
+# Inner edge of the stands: a superellipse that clears the arena's (cut) corners with room to spare.
+EXPONENT = 4.0
+A0, B0 = round(ARENA_X * 1.145), round(ARENA_Z * 1.227)
+SEGMENTS = 400  # around the bowl
 SECTORS = 8  # mesh chunks per material (keeps each mesh well under 10k triangles)
 
 ROW_DEPTH = 4.5
