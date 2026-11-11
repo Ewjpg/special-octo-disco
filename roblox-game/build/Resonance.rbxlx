@@ -1069,6 +1069,11 @@ Config.Shot = {
 	BaseElevation = 15, -- градусы, добавляются к наклону камеры
 	MinElevation = 1,
 	MaxElevation = 50,
+	-- Curved shot: hold A or D while releasing. The ball leaves a little to the other side,
+	-- then its flight bends towards the held key (like a spinning ball).
+	CurveTurnRate = 0.75, -- how fast the flight direction turns, radians per second
+	CurveStartAngle = 9, -- degrees the ball starts off to the opposite side
+	CurveTime = 1.6, -- how long the spin acts, seconds
 }
 
 Config.Pass = {
@@ -1727,17 +1732,45 @@ function handlers.Charge(actor, on)
 	setCharging(actor, on == true and actor.hasBall and ready(actor, t))
 end
 
-function handlers.Shoot(actor, direction, charge)
+-- Spin on a curved shot: every frame the ball's horizontal velocity turns a little to one side
+-- (curve > 0 = right, < 0 = left), so the flight bends into an arc instead of a straight line.
+local function addCurve(curve: number)
+	local rate = SHOT.CurveTurnRate * curve
+	Ball.addForce(SHOT.CurveTime, function(dt, part)
+		local v = part.AssemblyLinearVelocity
+		local flat = Vector3.new(v.X, 0, v.Z)
+		local speed = flat.Magnitude
+		if speed < 25 then
+			return
+		end
+		local push = Util.rightOf(flat) * (speed * rate * dt)
+		local turned = (flat + push).Unit * speed
+		part.AssemblyLinearVelocity = Vector3.new(turned.X, v.Y, turned.Z)
+	end)
+end
+
+function handlers.Shoot(actor, direction, charge, curve)
 	local t = Actors.now()
 	setCharging(actor, false)
 	if not ready(actor, t) or not actor.hasBall or not Util.isVector(direction) then
 		return
 	end
 	local power01 = math.clamp(tonumber(charge) or 0, 0, 1)
+	local spin = math.clamp(tonumber(curve) or 0, -1, 1)
+	if spin ~= spin then -- NaN from a bad client
+		spin = 0
+	end
 	local flat = Util.flatUnit(direction, actor.root.CFrame.LookVector)
+	if math.abs(spin) > 0.1 then
+		-- Start off to the opposite side so the bend brings the ball back across the aim line.
+		flat = Util.rotateY(flat, SHOT.CurveStartAngle * spin)
+	end
 	local elevation = math.clamp(Util.elevationOf(direction), SHOT.MinElevation, SHOT.MaxElevation)
 	local power = Util.lerp(SHOT.MinPower, SHOT.MaxPower, power01) * (actor.style.stats.shot or 1)
 	Ball.kick(actor, Util.withElevation(flat, elevation) * power, { kind = "Shot" })
+	if math.abs(spin) > 0.1 then
+		addCurve(spin)
+	end
 	kickFx(actor, "Shot", power01)
 end
 
@@ -5427,7 +5460,6 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
-local FieldSpec = require(Shared.FieldSpec)
 local Mover = require(Shared.Mover)
 local Styles = require(Shared.Styles)
 local Util = require(Shared.Util)
@@ -5436,7 +5468,6 @@ local State = require(script.Parent.State)
 
 local SHOT, TACKLE, DASH, DRIBBLE = Config.Shot, Config.Tackle, Config.Dash, Config.Dribble
 local CONTROLS = Config.Controls
-local R = Config.Ball.Radius
 
 local Controls = {}
 
@@ -5451,7 +5482,6 @@ local faceUntil = 0
 local faceDir: Vector3? = nil
 local autoRotateOff = false
 local locks = {} -- защита от двойного срабатывания, пока сервер не подтвердил перезарядку
-local dots = {} -- точки предпросмотра траектории
 
 ---------------------------------------------------------------------------
 -- Прицеливание
@@ -5486,6 +5516,24 @@ local function moveDirection(): Vector3
 		return Util.flatUnit(humanoid.MoveDirection)
 	end
 	return Vector3.zero
+end
+
+-- Curve of a shot: hold A (left) or D (right). On a gamepad or touch, push the stick sideways.
+local function curveInput(): number
+	local curve = 0
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+		curve -= 1
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+		curve += 1
+	end
+	if curve == 0 and not UserInputService.KeyboardEnabled then
+		local side = moveDirection():Dot(Util.rightOf(Controls.aimFlat()))
+		if math.abs(side) > 0.5 then
+			curve = math.sign(side)
+		end
+	end
+	return curve
 end
 
 local function canAct(): boolean
@@ -5555,7 +5603,7 @@ local function releaseShot()
 	if State.hasBall() and canAct() then
 		ProcAnimator.play(character, "Shoot")
 		face(direction, 0.3)
-		State.send("Shoot", direction, charge)
+		State.send("Shoot", direction, charge, curveInput())
 	else
 		State.send("Charge", false)
 	end
@@ -5728,70 +5776,11 @@ end
 -- Каждый кадр
 ---------------------------------------------------------------------------
 
-local function hideDots()
-	for _, dot in ipairs(dots) do
-		dot.Transparency = 1
-	end
-end
-
--- Пунктир траектории, пока игрок держит удар.
-local function updatePreview()
-	if not Controls.charging then
-		if #dots > 0 and dots[1].Transparency < 1 then
-			hideDots()
-		end
-		return
-	end
-	local root, humanoid = State.root(), State.humanoid()
-	if not root or not humanoid then
-		return
-	end
-	if #dots == 0 then
-		for i = 1, 12 do
-			local dot = Instance.new("Part")
-			dot.Name = "AimDot"
-			dot.Shape = Enum.PartType.Ball
-			dot.Size = Vector3.new(0.55, 0.55, 0.55)
-			dot.Anchored = true
-			dot.CanCollide = false
-			dot.CanTouch = false
-			dot.CanQuery = false
-			dot.CastShadow = false
-			dot.Material = Enum.Material.Neon
-			dot.Transparency = 1
-			dot.Parent = Workspace
-			dots[i] = dot
-		end
-	end
-
-	local style = State.style()
-	local direction = Controls.shotDirection()
-	local power = Util.lerp(SHOT.MinPower, SHOT.MaxPower, Controls.charge) * (style.stats.shot or 1)
-	local gravity = Workspace.Gravity * Config.Ball.GravityScale
-	local groundOffset = Util.groundOffset(root, humanoid)
-	local start = root.Position - Vector3.new(0, groundOffset - R, 0) + Util.flatUnit(direction) * Config.Ball.HoldDistance
-	local floor = FieldSpec.Origin.Y + R * 0.5
-	local landed = false
-	for i, dot in ipairs(dots) do
-		local t = i * 0.065
-		local point = start + direction * power * t - Vector3.new(0, 0.5 * gravity * t * t, 0)
-		if landed or point.Y < floor then
-			landed = true
-			dot.Transparency = 1
-		else
-			dot.Color = style.color
-			dot.CFrame = CFrame.new(point)
-			dot.Transparency = 0.2 + i * 0.05
-		end
-	end
-end
-
 local function onRender()
 	local humanoid, root = State.humanoid(), State.root()
 	if not humanoid or not root then
 		Controls.charging = false
 		Controls.charge = 0
-		hideDots()
 		return
 	end
 
@@ -5815,8 +5804,6 @@ local function onRender()
 		autoRotateOff = false
 		humanoid.AutoRotate = true
 	end
-
-	updatePreview()
 end
 
 ---------------------------------------------------------------------------
