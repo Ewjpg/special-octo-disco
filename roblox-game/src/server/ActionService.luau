@@ -87,17 +87,45 @@ function handlers.Charge(actor, on)
 	setCharging(actor, on == true and actor.hasBall and ready(actor, t))
 end
 
-function handlers.Shoot(actor, direction, charge)
+-- Spin on a curved shot: every frame the ball's horizontal velocity turns a little to one side
+-- (curve > 0 = right, < 0 = left), so the flight bends into an arc instead of a straight line.
+local function addCurve(curve: number)
+	local rate = SHOT.CurveTurnRate * curve
+	Ball.addForce(SHOT.CurveTime, function(dt, part)
+		local v = part.AssemblyLinearVelocity
+		local flat = Vector3.new(v.X, 0, v.Z)
+		local speed = flat.Magnitude
+		if speed < 25 then
+			return
+		end
+		local push = Util.rightOf(flat) * (speed * rate * dt)
+		local turned = (flat + push).Unit * speed
+		part.AssemblyLinearVelocity = Vector3.new(turned.X, v.Y, turned.Z)
+	end)
+end
+
+function handlers.Shoot(actor, direction, charge, curve)
 	local t = Actors.now()
 	setCharging(actor, false)
 	if not ready(actor, t) or not actor.hasBall or not Util.isVector(direction) then
 		return
 	end
 	local power01 = math.clamp(tonumber(charge) or 0, 0, 1)
+	local spin = math.clamp(tonumber(curve) or 0, -1, 1)
+	if spin ~= spin then -- NaN from a bad client
+		spin = 0
+	end
 	local flat = Util.flatUnit(direction, actor.root.CFrame.LookVector)
+	if math.abs(spin) > 0.1 then
+		-- Start off to the opposite side so the bend brings the ball back across the aim line.
+		flat = Util.rotateY(flat, SHOT.CurveStartAngle * spin)
+	end
 	local elevation = math.clamp(Util.elevationOf(direction), SHOT.MinElevation, SHOT.MaxElevation)
 	local power = Util.lerp(SHOT.MinPower, SHOT.MaxPower, power01) * (actor.style.stats.shot or 1)
 	Ball.kick(actor, Util.withElevation(flat, elevation) * power, { kind = "Shot" })
+	if math.abs(spin) > 0.1 then
+		addCurve(spin)
+	end
 	kickFx(actor, "Shot", power01)
 end
 

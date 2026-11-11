@@ -23,6 +23,7 @@ Emu.prints = {}
 Emu.verbose = false
 Emu.game = nil
 Emu.bound = {} -- ContextActionService: [name] = handler
+Emu.keysDown = {} -- UserInputService:IsKeyDown
 Emu.renderSteps = {}
 Emu.characters = {} -- [Model] = controller
 Emu.remoteLog = {} -- счётчики отправленных событий
@@ -337,6 +338,15 @@ local function installMocks()
 		return data(self).networkOwner
 	end)
 	roblox.implementMethod("PVInstance", "PivotTo", movePivot)
+	-- Keys held by the test (Emu.keysDown[Enum.KeyCode.A] = true).
+	roblox.implementMethod("UserInputService", "IsKeyDown", function(_, key)
+		for held, down in pairs(Emu.keysDown) do
+			if down and tostring(held) == tostring(key) then
+				return true
+			end
+		end
+		return false
+	end)
 	-- Model:ScaleTo / GetScale: scale part sizes, positions around the pivot, joint offsets and HipHeight.
 	roblox.implementMethod("Model", "GetScale", function(self)
 		return data(self).scale or 1
@@ -917,6 +927,7 @@ function Emu.load(placePath: string)
 	camera.ViewportSize = Vector2.new(1280, 720)
 
 	game:GetService("UserInputService").TouchEnabled = false
+	game:GetService("UserInputService").KeyboardEnabled = true
 	Emu.server = makeSide("server")
 
 	-- Размеры поля для физики эмулятора берём из самой игры.

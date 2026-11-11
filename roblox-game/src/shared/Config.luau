@@ -63,6 +63,11 @@ Config.Shot = {
 	BaseElevation = 15, -- градусы, добавляются к наклону камеры
 	MinElevation = 1,
 	MaxElevation = 50,
+	-- Curved shot: hold A or D while releasing. The ball leaves a little to the other side,
+	-- then its flight bends towards the held key (like a spinning ball).
+	CurveTurnRate = 0.75, -- how fast the flight direction turns, radians per second
+	CurveStartAngle = 9, -- degrees the ball starts off to the opposite side
+	CurveTime = 1.6, -- how long the spin acts, seconds
 }
 
 Config.Pass = {

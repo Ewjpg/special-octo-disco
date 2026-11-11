@@ -350,15 +350,43 @@ end)
 print("       исход удара: " .. outcome)
 Emu.run(3)
 
----------------------------------------------------------------------------
-section("Стили и способности")
----------------------------------------------------------------------------
-
 local function giveBall(player)
 	local actor = Actors.ofPlayer(player)
 	actor.noPickupUntil = 0
 	Ball.attach(actor)
 end
+
+---------------------------------------------------------------------------
+section("Curved shot (hold D)")
+---------------------------------------------------------------------------
+
+do
+	waitLive(40)
+	giveBall(alice)
+	Emu.run(0.3)
+	aimAt(goalCenter + Vector3.new(0, 4, 9))
+	local aim = ClientControls.aimFlat()
+	Emu.keysDown[Enum.KeyCode.D] = true
+	Emu.input("RS_Shoot", Enum.UserInputState.Begin, Enum.UserInputType.MouseButton1)
+	Emu.run(0.5)
+	Emu.input("RS_Shoot", Enum.UserInputState.End, Enum.UserInputType.MouseButton1)
+	Emu.keysDown[Enum.KeyCode.D] = nil
+	Emu.run(0.05)
+	local v0 = ballPart().AssemblyLinearVelocity
+	local flat0 = Vector3.new(v0.X, 0, v0.Z).Unit
+	local right = Vector3.new(-aim.Z, 0, aim.X)
+	check("curved shot starts to the left of the aim", flat0:Dot(right) < -0.05, string.format("%.3f", flat0:Dot(right)))
+	Emu.run(0.5)
+	local v1 = ballPart().AssemblyLinearVelocity
+	local flat1 = Vector3.new(v1.X, 0, v1.Z).Unit
+	local turn = math.deg(math.asin(math.clamp(flat0:Cross(flat1).Y * -1, -1, 1)))
+	check("curved shot bends to the right", turn > 8, string.format("%.1f°", turn))
+	Emu.run(4)
+end
+
+---------------------------------------------------------------------------
+section("Стили и способности")
+---------------------------------------------------------------------------
 
 -- Соперник и партнёр нужны для проверки способностей; пока стоят в стороне.
 -- Бобу Roblox «выдаёт» R15: сервер должен пересобрать его в R6.

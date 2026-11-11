@@ -10,7 +10,6 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
-local FieldSpec = require(Shared.FieldSpec)
 local Mover = require(Shared.Mover)
 local Styles = require(Shared.Styles)
 local Util = require(Shared.Util)
@@ -19,7 +18,6 @@ local State = require(script.Parent.State)
 
 local SHOT, TACKLE, DASH, DRIBBLE = Config.Shot, Config.Tackle, Config.Dash, Config.Dribble
 local CONTROLS = Config.Controls
-local R = Config.Ball.Radius
 
 local Controls = {}
 
@@ -34,7 +32,6 @@ local faceUntil = 0
 local faceDir: Vector3? = nil
 local autoRotateOff = false
 local locks = {} -- защита от двойного срабатывания, пока сервер не подтвердил перезарядку
-local dots = {} -- точки предпросмотра траектории
 
 ---------------------------------------------------------------------------
 -- Прицеливание
@@ -69,6 +66,24 @@ local function moveDirection(): Vector3
 		return Util.flatUnit(humanoid.MoveDirection)
 	end
 	return Vector3.zero
+end
+
+-- Curve of a shot: hold A (left) or D (right). On a gamepad or touch, push the stick sideways.
+local function curveInput(): number
+	local curve = 0
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+		curve -= 1
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+		curve += 1
+	end
+	if curve == 0 and not UserInputService.KeyboardEnabled then
+		local side = moveDirection():Dot(Util.rightOf(Controls.aimFlat()))
+		if math.abs(side) > 0.5 then
+			curve = math.sign(side)
+		end
+	end
+	return curve
 end
 
 local function canAct(): boolean
@@ -138,7 +153,7 @@ local function releaseShot()
 	if State.hasBall() and canAct() then
 		ProcAnimator.play(character, "Shoot")
 		face(direction, 0.3)
-		State.send("Shoot", direction, charge)
+		State.send("Shoot", direction, charge, curveInput())
 	else
 		State.send("Charge", false)
 	end
@@ -311,70 +326,11 @@ end
 -- Каждый кадр
 ---------------------------------------------------------------------------
 
-local function hideDots()
-	for _, dot in ipairs(dots) do
-		dot.Transparency = 1
-	end
-end
-
--- Пунктир траектории, пока игрок держит удар.
-local function updatePreview()
-	if not Controls.charging then
-		if #dots > 0 and dots[1].Transparency < 1 then
-			hideDots()
-		end
-		return
-	end
-	local root, humanoid = State.root(), State.humanoid()
-	if not root or not humanoid then
-		return
-	end
-	if #dots == 0 then
-		for i = 1, 12 do
-			local dot = Instance.new("Part")
-			dot.Name = "AimDot"
-			dot.Shape = Enum.PartType.Ball
-			dot.Size = Vector3.new(0.55, 0.55, 0.55)
-			dot.Anchored = true
-			dot.CanCollide = false
-			dot.CanTouch = false
-			dot.CanQuery = false
-			dot.CastShadow = false
-			dot.Material = Enum.Material.Neon
-			dot.Transparency = 1
-			dot.Parent = Workspace
-			dots[i] = dot
-		end
-	end
-
-	local style = State.style()
-	local direction = Controls.shotDirection()
-	local power = Util.lerp(SHOT.MinPower, SHOT.MaxPower, Controls.charge) * (style.stats.shot or 1)
-	local gravity = Workspace.Gravity * Config.Ball.GravityScale
-	local groundOffset = Util.groundOffset(root, humanoid)
-	local start = root.Position - Vector3.new(0, groundOffset - R, 0) + Util.flatUnit(direction) * Config.Ball.HoldDistance
-	local floor = FieldSpec.Origin.Y + R * 0.5
-	local landed = false
-	for i, dot in ipairs(dots) do
-		local t = i * 0.065
-		local point = start + direction * power * t - Vector3.new(0, 0.5 * gravity * t * t, 0)
-		if landed or point.Y < floor then
-			landed = true
-			dot.Transparency = 1
-		else
-			dot.Color = style.color
-			dot.CFrame = CFrame.new(point)
-			dot.Transparency = 0.2 + i * 0.05
-		end
-	end
-end
-
 local function onRender()
 	local humanoid, root = State.humanoid(), State.root()
 	if not humanoid or not root then
 		Controls.charging = false
 		Controls.charge = 0
-		hideDots()
 		return
 	end
 
@@ -398,8 +354,6 @@ local function onRender()
 		autoRotateOff = false
 		humanoid.AutoRotate = true
 	end
-
-	updatePreview()
 end
 
 ---------------------------------------------------------------------------
