@@ -68,7 +68,25 @@ if stadium then
 		end
 	end
 end
-check("деталей стадиона > 800", partCount > 800, partCount)
+local stadiumMesh = workspace:FindFirstChild("StadiumMesh")
+if stadiumMesh then
+	-- Imported Blender stadium: the part-built stands must be skipped and its lamps lit.
+	local meshParts, lamps = 0, 0
+	for _, d in ipairs(stadiumMesh:GetDescendants()) do
+		if d:IsA("BasePart") then
+			meshParts += 1
+			if d.Material == Enum.Material.Neon then
+				lamps += 1
+			end
+		end
+	end
+	check("стадион из Blender на месте", meshParts >= 40, meshParts)
+	check("старые трибуны из деталей не строятся", stadium and stadium:FindFirstChild("Stands") == nil)
+	check("прожекторы стадиона светятся", lamps >= 8, lamps)
+	check("поле, ворота и борта построены", partCount > 500, partCount)
+else
+	check("деталей стадиона > 800", partCount > 800, partCount)
+end
 check("мяч создан", workspace:FindFirstChild("Ball") ~= nil)
 check(
 	"на стадионе нет старых названий",

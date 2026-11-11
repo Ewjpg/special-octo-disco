@@ -27,6 +27,9 @@
     "Workspace": {
       "$properties": {
         "StreamingEnabled": false
+      },
+      "StadiumMesh": {
+        "$path": "assets/StadiumMesh.rbxm"
       }
     },
     "Lighting": {
