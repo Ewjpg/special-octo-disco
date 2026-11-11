@@ -94,9 +94,9 @@ materials = {
     "roof": pbr_material("roof"),
     # Emissive "neon_*" materials. Roblox Import 3D does not turn emission into Neon by itself:
     # the game does it at runtime for every part whose name starts with neon_<colour>.
-    "neon_blue": flat_material("neon_blue", (60, 130, 255), emission=6.0),
-    "neon_purple": flat_material("neon_purple", (150, 80, 255), emission=6.0),
-    "neon_white": flat_material("neon_white", (215, 230, 255), emission=10.0),
+    "ads": pbr_material("ads"),
+    "dark": pbr_material("dark"),
+    "neon_white": flat_material("neon_white", (235, 240, 255), emission=2.0),
 }
 
 stadium = bpy.data.collections.new("Stadium")
@@ -154,14 +154,14 @@ def box(name, size_r, center_r, mat):
     return o
 
 
-grass_a = flat_material("grass_a", (26, 70, 36), roughness=0.95)
-grass_b = flat_material("grass_b", (23, 63, 32), roughness=0.95)
-apron = flat_material("apron", (19, 52, 27), roughness=0.95)
-white = flat_material("line", (120, 170, 255), emission=4.0)
-goal_neon = flat_material("goal_neon", (170, 110, 255), emission=6.0)
+grass_a = flat_material("grass_a", (70, 132, 58), roughness=0.95)
+grass_b = flat_material("grass_b", (58, 114, 48), roughness=0.95)
+apron = flat_material("apron", (52, 98, 44), roughness=0.95)
+white = flat_material("line", (240, 242, 246), roughness=0.6)
+goal_neon = flat_material("goal_frame", (240, 242, 246), roughness=0.4)
 figure = flat_material("figure", (60, 64, 76), roughness=0.7)
-board_home = flat_material("board_home", (52, 120, 255), emission=3.0)
-board_away = flat_material("board_away", (240, 62, 72), emission=3.0)
+board_home = flat_material("board_home", (52, 120, 255), emission=0.8)
+board_away = flat_material("board_away", (240, 62, 72), emission=0.8)
 
 stripes = 19
 w = 2 * HL / stripes
@@ -180,9 +180,9 @@ for s in (-1, 1):
     # Player figures for scale (R6 proportions at Config.Player.Scale = 0.75: 3.75 studs tall).
     for k, fz in enumerate((-12, 0, 9)):
         fx = gx - s * (8 + 6 * k)
-        box("figure_legs", (1.5, 1.5, 0.75), (fx, 0.75, fz), figure)
-        box("figure_torso", (1.5, 1.5, 0.75), (fx, 2.25, fz), figure)
-        box("figure_head", (0.9, 0.75, 0.9), (fx, 3.4, fz), figure)
+        box("figure_legs", (2, 2, 1), (fx, 1, fz), figure)
+        box("figure_torso", (2, 2, 1), (fx, 3, fz), figure)
+        box("figure_head", (1.2, 1, 1.2), (fx, 4.5, fz), figure)
 for zs in (-1, 1):
     box("board", (ARENA_X, 4.5, 2), (-ARENA_X / 2, 2.25, zs * (ARENA_Z + 1)), board_home)
     box("board", (ARENA_X, 4.5, 2), (ARENA_X / 2, 2.25, zs * (ARENA_Z + 1)), board_away)
@@ -191,7 +191,7 @@ for s, mat in ((-1, board_home), (1, board_away)):
 
 # --- light and world ----------------------------------------------------------------
 sun_data = bpy.data.lights.new("Sun", type="SUN")
-sun_data.energy = 2.6
+sun_data.energy = 3.4
 sun_data.angle = math.radians(2.0)
 sun_data.color = (1.0, 0.97, 0.92)
 sun = bpy.data.objects.new("Sun", sun_data)
@@ -202,7 +202,7 @@ world = bpy.data.worlds.new("World")
 scene.world = world
 world.use_nodes = True
 bg = world.node_tree.nodes.get("Background")
-bg.inputs["Color"].default_value = (0.30, 0.38, 0.55, 1.0)  # deeper sky so the neon reads
+bg.inputs["Color"].default_value = (0.45, 0.58, 0.78, 1.0)  # daytime sky
 bg.inputs["Strength"].default_value = 0.9
 
 # ---------------------------------------------------------------------------

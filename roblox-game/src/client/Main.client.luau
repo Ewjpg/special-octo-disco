@@ -10,6 +10,7 @@ local FxEvents = require(Client.FxEvents)
 local BallVisuals = require(Client.BallVisuals)
 local Controls = require(Client.Controls)
 local Hud = require(Client.Hud)
+local Cinematics = require(Client.Cinematics)
 
 -- Рюкзак и полоска здоровья в футболе не нужны.
 for _, coreGui in ipairs({ Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health, Enum.CoreGuiType.EmotesMenu }) do
@@ -24,3 +25,4 @@ FxEvents.start()
 BallVisuals.start()
 Controls.start()
 Hud.start()
+Cinematics.start()

@@ -10,13 +10,10 @@ Config.Teams = {
 }
 
 -- Тип аватара. Анимации есть для обоих, основной — R6.
--- Neon palette. Stadium mesh parts named neon_<colour>_N get Material Neon with these colours at runtime.
+-- Light-emitting parts of the stadium mesh: parts named neon_<colour>_N become Neon in that colour
+-- at runtime (Import 3D does not carry emission over). Only the floodlight faces use it.
 Config.Neon = {
-	Line = Color3.fromRGB(120, 170, 255), -- pitch markings
-	Goal = Color3.fromRGB(170, 110, 255), -- goal frames
-	blue = Color3.fromRGB(60, 130, 255),
-	purple = Color3.fromRGB(150, 80, 255),
-	white = Color3.fromRGB(215, 230, 255), -- floodlight faces
+	white = Color3.fromRGB(235, 240, 255), -- floodlight faces
 }
 
 Config.Avatar = {
@@ -32,7 +29,7 @@ Config.Match = {
 }
 
 Config.Player = {
-	Scale = 0.75, -- size of every character (players and goalkeepers), 1 = normal Roblox size
+	Scale = 1, -- size of every character (players and goalkeepers), 1 = normal Roblox size
 	WalkSpeed = 22,
 	SprintSpeed = 32,
 	DribbleMult = 0.94, -- скорость с мячом
@@ -49,11 +46,11 @@ Config.Ball = {
 	GroundDrag = 0.55,
 	AirDrag = 0.1,
 	MaxSpeed = 330,
-	PickupRadius = 2.9,
-	PickupHeight = 4.8,
+	PickupRadius = 3.4,
+	PickupHeight = 6,
 	TrapMaxSpeed = 108, -- мяч быстрее этого нельзя принять, только отбить
 	TeammateTrapBonus = 1.4, -- партнёр принимает более быстрые мячи
-	HoldDistance = 1.9, -- на сколько мяч впереди игрока при ведении
+	HoldDistance = 2.3, -- на сколько мяч впереди игрока при ведении
 	KickNoPickup = 0.4,
 	BlockDamping = 0.34,
 }
@@ -88,7 +85,7 @@ Config.Tackle = {
 	Stamina = 16,
 	Duration = 0.5,
 	Speed = 46,
-	Radius = 3.8,
+	Radius = 4.6,
 	StunTime = 0.75,
 	KnockSpeed = 30,
 }
@@ -123,8 +120,8 @@ Config.Resonance = {
 Config.Bots = {
 	Goalkeepers = true,
 	KeeperSpeed = 23,
-	KeeperReach = 3.9, -- радиус, в котором вратарь ловит мяч
-	KeeperDiveReach = 5.2,
+	KeeperReach = 4.6, -- радиус, в котором вратарь ловит мяч
+	KeeperDiveReach = 6.2,
 	KeeperCatchSpeed = 150, -- быстрее — только отбивает (сильный заряженный удар вратарь не ловит)
 	KeeperDiveSpeed = 40,
 	KeeperDiveCooldown = 1.5,
@@ -162,7 +159,7 @@ Config.Sounds = {
 	PowerKick = { Id = "rbxasset://sounds/Rocket shot.wav", Volume = 0.7, Pitch = 1.25 },
 	Pass = { Id = "rbxasset://sounds/snap.wav", Volume = 0.55, Pitch = 1.1 },
 	Bounce = { Id = "rbxasset://sounds/bass.wav", Volume = 0.25, Pitch = 1.6 },
-	Dash = { Id = "rbxasset://sounds/swoosh.wav", Volume = 0.6, Pitch = 1.2 },
+	Dash = { Id = "rbxasset://sounds/swordlunge.wav", Volume = 0.5, Pitch = 1.6 },
 	Slide = { Id = "rbxasset://sounds/swordslash.wav", Volume = 0.45, Pitch = 0.7 },
 	Steal = { Id = "rbxasset://sounds/swordlunge.wav", Volume = 0.6, Pitch = 1 },
 	Block = { Id = "rbxasset://sounds/collide.wav", Volume = 0.7, Pitch = 0.9 },

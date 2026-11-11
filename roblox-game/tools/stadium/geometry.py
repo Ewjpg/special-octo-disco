@@ -259,12 +259,11 @@ def build(seed: int = 7):
     b.strip("concrete", (d, roof_y), (d + 4.0, roof_y), CONCRETE_TILE, 0.0, 4.0 / CONCRETE_TILE, flip=True)
     b.strip("metal", (d + 4.0, 0.0), (d + 4.0, roof_y), CONCRETE_TILE, roof_y / CONCRETE_TILE, 0.0)
 
-    # LED strips on the front wall and both fascias (a hair in front of the wall).
-    b.strip("neon_blue", (-0.06, FRONT_WALL - 1.2), (-0.06, FRONT_WALL - 0.4), 64.0, 0.6, 0.4, flip=True)
-    for k, (_, fd, fy0, fy1) in enumerate(profile_points):
-        colour = "neon_purple" if k % 2 == 0 else "neon_blue"
-        b.strip(colour, (fd - 0.06, fy1 - 2.4), (fd - 0.06, fy1 - 0.8), 64.0, 0.6, 0.4, flip=True)
-    b.strip("neon_blue", (back_d - 0.06, roof_y - 5.0), (back_d - 0.06, roof_y - 3.6), 64.0, 0.6, 0.4, flip=True)
+    # LED advertising screens on the front wall and on both fascias (a hair in front of the wall).
+    # The ads texture holds one strip in its top quarter: v 0.25 at the bottom edge, 0 at the top.
+    b.strip("ads", (-0.06, 0.6), (-0.06, FRONT_WALL - 0.4), 32.0, 0.25, 0.0, flip=True)
+    for _, fd, fy0, fy1 in profile_points:
+        b.strip("ads", (fd - 0.06, fy1 - 5.6), (fd - 0.06, fy1 - 1.0), 36.0, 0.25, 0.0, flip=True)
 
     # Ring roof: inner edge cantilevers over the lower tier, slab slopes down towards the back.
     inner_d = 64.0
@@ -274,7 +273,6 @@ def build(seed: int = 7):
     b.strip("roof", (inner_d, inner_y + thick), (outer_d, roof_y + thick), ROOF_TILE, 0.0, (outer_d - inner_d) / ROOF_TILE, flip=True)  # top
     b.strip("roof", (inner_d, inner_y), (outer_d, roof_y), ROOF_TILE, 0.0, (outer_d - inner_d) / ROOF_TILE)  # underside
     b.strip("metal", (inner_d, inner_y), (inner_d, inner_y + thick), CONCRETE_TILE, thick / CONCRETE_TILE, 0.0, flip=True)  # edge
-    b.strip("neon_purple", (inner_d - 0.06, inner_y + 0.4), (inner_d - 0.06, inner_y + 1.6), 64.0, 0.6, 0.4, flip=True)
 
     # Roof trusses: radial beams under the slab every few segments.
     step = 8
@@ -284,7 +282,7 @@ def build(seed: int = 7):
         b.box_between("metal", i * SECTORS // SEGMENTS, r_in[i], r_out[i], inner_y - 0.05, roof_y - 0.05, 4.0, 1.4, CONCRETE_TILE)
 
     # Massive floodlight pylons standing on the back of the bowl and rising far above the roof:
-    # a dark steel shaft with two neon stripes facing the pitch, and a floodlight head on top.
+    # a steel shaft and a floodlight head on top whose lamp face glows (neon_white -> Neon in game).
     pylons = 8
     top_y = roof_y + 95.0
     for k in range(pylons):
@@ -293,13 +291,20 @@ def build(seed: int = 7):
         base = ring(back_d + 3.0)[i]
         inward = -base / np.linalg.norm(base)
         b.prism("metal", sector, base, inward, 16.0, 12.0, 0.0, top_y)
-        for off in (-4.5, 4.5):
-            t = np.array([-inward[1], inward[0]])
-            stripe = base + inward * 6.05 + t * off
-            b.prism("neon_purple", sector, stripe, inward, 1.6, 0.3, roof_y + 6.0, top_y - 4.0)
         head = base + inward * 4.0
         b.prism("metal", sector, head, inward, 40.0, 6.0, top_y - 2.0, top_y + 16.0)
         b.prism("neon_white", sector, head + inward * 3.05, inward, 36.0, 0.3, top_y, top_y + 14.0)
+
+    # Players' tunnel: a concrete portal in front of the lower tier, middle of the +Z side,
+    # with a dark opening facing the pitch.
+    inner = ring(0.0)
+    i = int(np.argmax(inner[:, 1]))
+    sector = i * SECTORS // SEGMENTS
+    inward = -inner[i] / np.linalg.norm(inner[i])
+    portal = ring(-7.0)[i]
+    b.prism("concrete", sector, portal, inward, 34.0, 14.0, 0.0, 15.0)
+    b.prism("dark", sector, portal + inward * 7.05, inward, 24.0, 0.3, 0.0, 11.0)
+    b.prism("metal", sector, portal + inward * 7.2, inward, 36.0, 0.8, 15.0, 16.5)
 
     chunks = b.chunks()
     info = {

@@ -29,9 +29,9 @@ MATERIALS = {
     "metal": {"maps": ["color", "normal", "roughness", "metalness"]},
     "roof": {"maps": ["color", "normal", "roughness", "metalness"]},
     # Neon parts are plain Neon MeshParts; colours match Config.Neon in the game.
-    "neon_blue": {"neon": [60, 130, 255]},
-    "neon_purple": {"neon": [150, 80, 255]},
-    "neon_white": {"neon": [215, 230, 255]},
+    "ads": {"maps": ["color", "normal", "roughness", "metalness"]},
+    "dark": {"maps": ["color", "normal", "roughness", "metalness"]},
+    "neon_white": {"neon": [235, 240, 255]},  # floodlight faces only
 }
 
 

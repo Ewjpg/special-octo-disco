@@ -902,10 +902,6 @@ local function hookEvents()
 		Hud.banner(tostring(data.n), subtitle, WHITE, 0.8)
 	end)
 
-	FxEvents.on("Whistle", function()
-		Hud.banner("PLAY!", "", GOLD, 0.9)
-	end)
-
 	FxEvents.on("Goal", function(data)
 		local team = Config.Teams[data.team]
 		local subtitle = ""

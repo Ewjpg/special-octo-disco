@@ -79,7 +79,7 @@ local function line(parent: Instance, x1: number, z1: number, x2: number, z2: nu
 	end
 	local yaw = math.atan2(-dz, dx)
 	local cf = at((x1 + x2) / 2, LINE_Y, (z1 + z2) / 2) * CFrame.Angles(0, yaw, 0)
-	local p = newPart(parent, "Line", Vector3.new(length + 0.05, 0.08, width or F.LineWidth), cf, Config.Neon.Line, Enum.Material.Neon)
+	local p = newPart(parent, "Line", Vector3.new(length + 0.05, 0.08, width or F.LineWidth), cf, WHITE)
 	decor(p)
 end
 
@@ -98,7 +98,7 @@ end
 
 local function spot(parent: Instance, x: number, z: number, radius: number)
 	local cf = at(x, LINE_Y, z) * CFrame.Angles(0, 0, math.rad(90))
-	local p = newPart(parent, "Spot", Vector3.new(0.08, radius * 2, radius * 2), cf, Config.Neon.Line, Enum.Material.Neon)
+	local p = newPart(parent, "Spot", Vector3.new(0.08, radius * 2, radius * 2), cf, WHITE)
 	p.Shape = Enum.PartType.Cylinder
 	decor(p)
 end
@@ -117,18 +117,24 @@ local function buildPitch(root: Instance)
 	)
 	ground.CastShadow = false
 
-	-- Газон: тёмный, насыщенный, с еле заметными полосами покоса.
-	local stripes = 19
+	-- Газон: покос «в клетку» — широкие полосы поперёк поля и более мягкая смена тона вдоль него.
+	local stripes, bands = 20, 8
 	local stripeWidth = F.Length / stripes
+	local bandWidth = F.Width / bands
+	local light, dark = Color3.fromRGB(70, 132, 58), Color3.fromRGB(58, 114, 48)
 	for i = 0, stripes - 1 do
-		local x = -HL + stripeWidth * (i + 0.5)
-		local color = i % 2 == 0 and Color3.fromRGB(26, 70, 36) or Color3.fromRGB(23, 63, 32)
-		local stripe = newPart(pitch, "Grass", Vector3.new(stripeWidth, 1, F.Width), at(x, -0.5, 0), color, Enum.Material.Grass)
-		stripe.CastShadow = false
+		for j = 0, bands - 1 do
+			local x = -HL + stripeWidth * (i + 0.5)
+			local z = -HW + bandWidth * (j + 0.5)
+			local base = i % 2 == 0 and light or dark
+			local color = j % 2 == 0 and base or base:Lerp(Color3.new(0, 0, 0), 0.05)
+			local tile = newPart(pitch, "Grass", Vector3.new(stripeWidth, 1, bandWidth), at(x, -0.5, z), color, Enum.Material.Grass)
+			tile.CastShadow = false
+		end
 	end
 
 	-- Газон за линиями до бортов.
-	local apronColor = Color3.fromRGB(19, 52, 27)
+	local apronColor = Color3.fromRGB(52, 98, 44)
 	for _, s in ipairs({ -1, 1 }) do
 		local endApron = newPart(
 			pitch,
@@ -199,7 +205,7 @@ local function buildLines(root: Instance)
 end
 
 local function cylinder(parent: Instance, name: string, length: number, radius: number, cframe: CFrame, color: Color3): Part
-	local p = newPart(parent, name, Vector3.new(length, radius * 2, radius * 2), cframe, color, Enum.Material.Neon)
+	local p = newPart(parent, name, Vector3.new(length, radius * 2, radius * 2), cframe, color, Enum.Material.Metal)
 	p.Shape = Enum.PartType.Cylinder
 	return p
 end
@@ -217,22 +223,22 @@ local function buildGoal(root: Instance, side: number)
 
 	-- Каркас.
 	for _, zs in ipairs({ -1, 1 }) do
-		cylinder(goal, "Post", h, r, at(gx, h / 2, zs * halfW) * vertical, Config.Neon.Goal)
-		decor(cylinder(goal, "BackPost", h, r * 0.5, at(backX, h / 2, zs * halfW) * vertical, Config.Neon.Goal))
-		decor(cylinder(goal, "TopRail", F.GoalDepth, r * 0.5, at(midX, h, zs * halfW), Config.Neon.Goal))
+		cylinder(goal, "Post", h, r, at(gx, h / 2, zs * halfW) * vertical, WHITE)
+		decor(cylinder(goal, "BackPost", h, r * 0.5, at(backX, h / 2, zs * halfW) * vertical, WHITE))
+		decor(cylinder(goal, "TopRail", F.GoalDepth, r * 0.5, at(midX, h, zs * halfW), WHITE))
 	end
-	cylinder(goal, "Crossbar", F.GoalWidth + r * 2, r, at(gx, h, 0) * alongZ, Config.Neon.Goal)
+	cylinder(goal, "Crossbar", F.GoalWidth + r * 2, r, at(gx, h, 0) * alongZ, WHITE)
 	decor(cylinder(goal, "BackBar", F.GoalWidth, r * 0.5, at(backX, h, 0) * alongZ, WHITE))
 
 	-- Сетка: тонкие нити без столкновений.
-	local netColor = Color3.fromRGB(190, 170, 255)
+	local netColor = Color3.fromRGB(246, 247, 250)
 	local function strand(size: Vector3, cf: CFrame)
 		local p = newPart(goal, "Net", size, cf, netColor)
-		p.Transparency = 0.45
+		p.Transparency = 0.1
 		decor(p)
 	end
-	local t = 0.12
-	local step = 2
+	local t = 0.16
+	local step = 1.6
 	for z = -halfW + step, halfW - step, step do
 		strand(Vector3.new(t, h, t), at(backX, h / 2, z))
 		strand(Vector3.new(F.GoalDepth, t, t), at(midX, h, z))
@@ -284,12 +290,53 @@ local function buildWalls(root: Instance)
 	local wallT = 6
 	local wallH = F.WallHeight
 
-	-- Борт: тёмно-синий корпус и светодиодная панель в цвет команды той половины поля, где он стоит.
+	-- Борт: тёмный корпус и LED-экран со своей графикой — градиент цвета команды, шевроны и её название.
+	local boardIndex = 0
 	local function board(length: number, cf: CFrame, color: Color3)
-		newPart(walls, "Board", Vector3.new(length, boardH, boardT), cf, Color3.fromRGB(24, 44, 104), Enum.Material.Metal)
+		newPart(walls, "Board", Vector3.new(length, boardH, boardT), cf, Color3.fromRGB(26, 30, 42), Enum.Material.Metal)
 		local faceCf = cf * CFrame.new(0, -0.2, -boardT / 2 - 0.08)
-		local face = newPart(walls, "BoardFace", Vector3.new(length - 0.6, boardH - 1.4, 0.2), faceCf, color, Enum.Material.Neon)
+		local face = newPart(walls, "BoardFace", Vector3.new(length - 0.6, boardH - 1.4, 0.2), faceCf, Color3.fromRGB(12, 14, 22))
 		decor(face)
+		boardIndex += 1
+		local team = color == HOME.Color and HOME or AWAY
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Front
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+		gui.CanvasSize = Vector2.new(math.floor(length * 40), 124)
+		gui.LightInfluence = 0.15
+		gui.Brightness = 1.4
+		gui.Parent = face
+		local back = Instance.new("Frame")
+		back.Size = UDim2.fromScale(1, 1)
+		back.BorderSizePixel = 0
+		back.BackgroundColor3 = Color3.new(1, 1, 1)
+		back.Parent = gui
+		local gradient = Instance.new("UIGradient")
+		gradient.Color = ColorSequence.new(color:Lerp(Color3.new(0, 0, 0), 0.55), color)
+		gradient.Rotation = boardIndex % 2 == 0 and 0 or 180
+		gradient.Parent = back
+		-- Шевроны вдоль экрана.
+		for k = 0, 5 do
+			local chevron = Instance.new("Frame")
+			chevron.AnchorPoint = Vector2.new(0.5, 0.5)
+			chevron.Position = UDim2.fromScale(0.06 + k * 0.035, 0.5)
+			chevron.Size = UDim2.fromScale(0.012, 1.4)
+			chevron.Rotation = 25
+			chevron.BorderSizePixel = 0
+			chevron.BackgroundColor3 = Color3.new(1, 1, 1)
+			chevron.BackgroundTransparency = 0.25 + k * 0.12
+			chevron.Parent = back
+		end
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Position = UDim2.fromScale(0.3, 0.08)
+		label.Size = UDim2.fromScale(0.62, 0.84)
+		label.Font = Enum.Font.GothamBlack
+		label.TextScaled = true
+		label.TextColor3 = Color3.new(1, 1, 1)
+		label.TextXAlignment = Enum.TextXAlignment.Right
+		label.Text = team.Name
+		label.Parent = back
 	end
 
 	local segment = 24
@@ -358,7 +405,7 @@ local STAND_DEPTH = BACK + 3
 local ROOF_Y = UPPER_TOP + 14
 local ROOF_INNER = -12 -- крыша нависает над проходом перед трибуной
 
-local LED_BLUE = Color3.fromRGB(46, 118, 255)
+local LED_BLUE = Color3.fromRGB(120, 140, 170)
 local STRUCTURE_BLUE = Color3.fromRGB(34, 66, 156)
 local STRUCTURE_DARK = Color3.fromRGB(24, 44, 104)
 local TIER_LIGHT = Color3.fromRGB(198, 206, 224)
@@ -439,7 +486,9 @@ local function buildStandSide(parent: Instance, frame: CFrame, length: number, t
 	)
 	decor(walkway)
 	newPart(stands, "FrontWall", Vector3.new(length, LOWER_BASE, 1.2), local_(0, LOWER_BASE / 2, 0.6), STRUCTURE_DARK)
-	decor(newPart(stands, "FrontLed", Vector3.new(length, 0.5, 0.3), local_(0, LOWER_BASE - 0.6, -0.1), LED_BLUE, Enum.Material.Neon))
+	decor(
+		newPart(stands, "FrontLed", Vector3.new(length, 0.5, 0.3), local_(0, LOWER_BASE - 0.6, -0.1), LED_BLUE, Enum.Material.SmoothPlastic)
+	)
 
 	-- Туннель выхода игроков в середине нижнего яруса.
 	local tunnelRows, tunnelHalf = 5, 14
@@ -464,12 +513,19 @@ local function buildStandSide(parent: Instance, frame: CFrame, length: number, t
 					Vector3.new(0.5, height, 0.5),
 					local_(xs * tunnelHalf, height / 2, -0.7),
 					LED_BLUE,
-					Enum.Material.Neon
+					Enum.Material.SmoothPlastic
 				)
 			)
 		end
 		decor(
-			newPart(stands, "TunnelLed", Vector3.new(tunnelHalf * 2 + 0.5, 0.5, 0.5), local_(0, height, -0.7), LED_BLUE, Enum.Material.Neon)
+			newPart(
+				stands,
+				"TunnelLed",
+				Vector3.new(tunnelHalf * 2 + 0.5, 0.5, 0.5),
+				local_(0, height, -0.7),
+				LED_BLUE,
+				Enum.Material.SmoothPlastic
+			)
 		)
 	else
 		tier(LOWER_ROWS, LOWER_RISE, LOWER_BASE, 0)
@@ -480,9 +536,25 @@ local function buildStandSide(parent: Instance, frame: CFrame, length: number, t
 	local fasciaFace = fasciaZ - FASCIA_DEPTH / 2 - 0.15
 	newPart(stands, "Fascia", Vector3.new(length, UPPER_BASE, FASCIA_DEPTH), local_(0, UPPER_BASE / 2, fasciaZ), STRUCTURE_BLUE)
 	decor(
-		newPart(stands, "FasciaLed", Vector3.new(length, 0.9, 0.3), local_(0, UPPER_BASE - 1.6, fasciaFace), LED_BLUE, Enum.Material.Neon)
+		newPart(
+			stands,
+			"FasciaLed",
+			Vector3.new(length, 0.9, 0.3),
+			local_(0, UPPER_BASE - 1.6, fasciaFace),
+			LED_BLUE,
+			Enum.Material.SmoothPlastic
+		)
 	)
-	decor(newPart(stands, "FasciaLed", Vector3.new(length, 0.5, 0.3), local_(0, LOWER_TOP + 1.2, fasciaFace), WHITE, Enum.Material.Neon))
+	decor(
+		newPart(
+			stands,
+			"FasciaLed",
+			Vector3.new(length, 0.5, 0.3),
+			local_(0, LOWER_TOP + 1.2, fasciaFace),
+			WHITE,
+			Enum.Material.SmoothPlastic
+		)
+	)
 
 	tier(UPPER_ROWS, UPPER_RISE, UPPER_BASE, UPPER_FRONT)
 
@@ -543,7 +615,7 @@ local function buildStandSide(parent: Instance, frame: CFrame, length: number, t
 			Vector3.new(length + 2, 0.7, 0.3),
 			local_(0, ROOF_Y - 2.6, ROOF_INNER - 0.9),
 			LED_BLUE,
-			Enum.Material.Neon
+			Enum.Material.SmoothPlastic
 		)
 	)
 	local lights = newPart(
@@ -671,7 +743,7 @@ end
 local function setupLighting()
 	Lighting.ClockTime = 14.4
 	Lighting.GeographicLatitude = 32
-	Lighting.Brightness = 2
+	Lighting.Brightness = 2.6
 	Lighting.Ambient = Color3.fromRGB(128, 136, 162)
 	Lighting.OutdoorAmbient = Color3.fromRGB(166, 178, 208)
 	Lighting.ColorShift_Top = Color3.fromRGB(236, 243, 255)
@@ -715,8 +787,8 @@ local function setupLighting()
 
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Brightness = 0.03
-	grade.Contrast = 0.14
-	grade.Saturation = -0.06
+	grade.Contrast = 0.1
+	grade.Saturation = 0.06
 	grade.TintColor = Color3.fromRGB(240, 242, 248)
 	grade.Parent = Lighting
 
@@ -775,7 +847,7 @@ function FieldBuilder.prepareStadiumMesh(): number
 					sa:Destroy() -- a texture would hide the neon glow
 				end
 				part.Material = Enum.Material.Neon
-				part.Color = Config.Neon[colour] or Config.Neon.blue
+				part.Color = Config.Neon[colour] or Config.Neon.white
 				part.CastShadow = false
 				neon += 1
 			end

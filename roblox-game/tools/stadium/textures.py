@@ -77,8 +77,8 @@ def rgb(*c) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def concrete(outdir: Path):
-    """Dark blue-grey concrete with form-work panel lines and soft stains (neon reads well on it)."""
-    base = rgb(62, 68, 86)
+    """Light grey concrete with form-work panel lines and soft stains."""
+    base = rgb(152, 156, 166)
     grain = fbm(N, 16, 5, 1)
     stains = fbm(N, 4, 3, 2)
     shade = (grain - 0.5) * 22 + (stains - 0.5) * 30
@@ -95,8 +95,8 @@ def concrete(outdir: Path):
 
 
 def metal(outdir: Path):
-    """Dark navy painted steel: brushed grain, panel seams, rivets."""
-    base = rgb(30, 36, 56)
+    """Blue-grey painted steel: brushed grain, panel seams, rivets."""
+    base = rgb(86, 94, 114)
     y, x = np.mgrid[0:N, 0:N]
     brushed = value_noise(N, 512, 3)[:, :]  # fine streaks
     brushed = np.asarray(Image.fromarray((brushed * 255).astype(np.uint8)).resize((N, 8)).resize((N, N)), np.float32) / 255.0
@@ -114,7 +114,7 @@ def metal(outdir: Path):
 
 def roof(outdir: Path):
     """Roof cladding: pale grey-blue panels in a grid with darker seams and gentle streaks."""
-    base = rgb(70, 78, 100)
+    base = rgb(182, 188, 200)
     y, x = np.mgrid[0:N, 0:N]
     streak = fbm(N, 6, 4, 5)
     color = base[None, None, :] + ((streak - 0.5) * 18)[:, :, None]
@@ -122,7 +122,7 @@ def roof(outdir: Path):
     panel = ((x // 256) + (y // 256)) % 2 == 1
     color[panel] = color[panel] * 0.93 + rgb(150, 168, 196) * 0.07
     seams = ((x % 256) < 4) | ((y % 256) < 4)
-    color[seams] = rgb(30, 34, 48)
+    color[seams] = rgb(96, 102, 118)
     height = -seams.astype(np.float32) * 0.7 + streak * 0.1
     rough = np.where(panel, 0.35, 0.55).astype(np.float32) + (streak - 0.5) * 0.1
     metalness = np.where(seams, 0.8, 0.25).astype(np.float32)
@@ -136,15 +136,21 @@ def crowd(outdir: Path):
     riser above it, which is what you see from the pitch. Every image starts with an aisle at the left
     edge, so every repeat along a stand has one.
     """
-    holo = rgb(112, 168, 255)  # the single crowd colour
-    seats = rgb(13, 15, 26)
-    riser = rgb(20, 23, 36)
+    seats = rgb(118, 126, 144)
+    riser = rgb(146, 152, 166)
+    shirts = [rgb(52, 110, 230), rgb(36, 72, 170), rgb(220, 60, 70), rgb(160, 40, 50), rgb(236, 238, 242),
+              rgb(40, 42, 50), rgb(120, 126, 138), rgb(250, 200, 60), rgb(70, 150, 90)]
+    weights = np.array([22, 12, 16, 8, 18, 9, 7, 4, 4], np.float64)
+    weights /= weights.sum()
+    skins = [rgb(232, 196, 166), rgb(198, 150, 116), rgb(140, 98, 72), rgb(96, 66, 50)]
+    hairs = [rgb(30, 24, 20), rgb(70, 48, 30), rgb(150, 110, 60), rgb(20, 20, 22)]
     color = np.zeros((N, N, 3), np.float32)
     y, x = np.mgrid[0:N, 0:N]
     in_band = y % 256
     color[:] = seats
     color[in_band > 150] = riser
     mask = np.zeros((N, N), bool)
+    paint = color.copy()  # per-person colours are written here, then masked in
 
     def rect(x0, y0, x1, y1):
         mask[max(0, int(y0)) : max(0, int(y1)), max(0, int(x0)) : max(0, int(x1))] = True
@@ -160,6 +166,7 @@ def crowd(outdir: Path):
         cx = aisle_w + 14 + rng.integers(0, 10)
         while cx < N - 22:
             if rng.random() > 0.05:
+                before = mask.copy()
                 s = 0.85 + rng.random() * 0.3  # body size
                 head_r = 11 * s
                 head_y = top + 40 + rng.integers(-8, 10)
@@ -186,19 +193,84 @@ def crowd(outdir: Path):
                 else:  # arms down
                     rect(cx - half - arm_w + 3, shoulder_y + 2, cx - half + 3, hip_y)
                     rect(cx + half - 3, shoulder_y + 2, cx + half + arm_w - 3, hip_y)
+                body = mask & ~before
+                shirt = shirts[rng.choice(len(shirts), p=weights)] * (0.9 + rng.random() * 0.2)
+                skin = skins[rng.integers(0, len(skins))]
+                paint[body] = shirt
+                # head and raised hands keep the skin colour; trousers are darker
+                head = body & ((y - head_y) ** 2 + (x - cx) ** 2 <= (head_r + 1) ** 2)
+                paint[head] = skin
+                hair = head & (y < head_y - head_r * 0.25)
+                paint[hair] = hairs[rng.integers(0, len(hairs))]
+                legs = body & (y > hip_y)
+                paint[legs] = rgb(46, 50, 64) * (0.8 + rng.random() * 0.4)
             cx += int(46 * (0.95 + rng.random() * 0.2))
 
-    color[mask] = holo
+    color[mask] = paint[mask]
     # aisle: dark steps with a faint glowing nosing
     aisle = x < aisle_w
     color[aisle] = np.where((in_band > 150)[:, :, None], rgb(26, 30, 44), rgb(34, 38, 54))[aisle]
     nosing = aisle & ((in_band < 4) | ((in_band > 148) & (in_band < 152)))
-    color[nosing] = rgb(70, 110, 190)
+    color[nosing] = rgb(210, 190, 70)  # yellow step edges
     mask[aisle] = False
 
     height = mask.astype(np.float32) * 0.4
-    rough = np.where(mask, 0.35, 0.9).astype(np.float32)
+    rough = np.where(mask, 0.8, 0.6).astype(np.float32)
     save(outdir, "crowd", color, height, rough, np.zeros((N, N), np.float32), 2.0)
+
+
+def ads(outdir: Path):
+    """LED advertising screens: a strip of panels with gradients, chevrons and words. Own graphics only."""
+    from PIL import ImageDraw, ImageFont
+
+    w, h = N, N // 4  # one strip, repeated along the stands
+    img = Image.new("RGB", (w, h), (10, 12, 20))
+    draw = ImageDraw.Draw(img)
+    panels = [
+        ((32, 80, 200), (70, 150, 255), "HOME"),
+        ((150, 28, 40), (240, 70, 80), "AWAY"),
+        ((18, 20, 30), (60, 66, 90), "KICK OFF"),
+        ((200, 150, 20), (255, 220, 80), "GOAL"),
+    ]
+    try:
+        font = ImageFont.truetype("arialbd.ttf", int(h * 0.55))
+    except OSError:
+        font = ImageFont.load_default()
+    pw = w // len(panels)
+    for k, (c0, c1, word) in enumerate(panels):
+        x0 = k * pw
+        for i in range(pw):
+            t = i / pw
+            col = tuple(int(c0[j] + (c1[j] - c0[j]) * t) for j in range(3))
+            draw.line([(x0 + i, 0), (x0 + i, h)], fill=col)
+        for c in range(4):
+            cx = x0 + 18 + c * 22
+            draw.polygon([(cx, 8), (cx + 14, h // 2), (cx, h - 8), (cx + 8, h - 8), (cx + 22, h // 2), (cx + 8, 8)], fill=(255, 255, 255))
+        # shrink the word until it fits the free part of its panel
+        size = int(h * 0.5)
+        fitted = font
+        while size > 10:
+            try:
+                fitted = ImageFont.truetype("arialbd.ttf", size)
+            except OSError:
+                break
+            if draw.textlength(word, font=fitted) <= pw * 0.56:
+                break
+            size -= 4
+        draw.text((x0 + pw * 0.66, h / 2), word, font=fitted, fill=(255, 255, 255), anchor="mm")
+        draw.rectangle([x0, 0, x0 + 3, h], fill=(0, 0, 0))
+    full = Image.new("RGB", (N, N))
+    for r in range(4):  # four copies stacked, so the map stays square
+        full.paste(img, (0, r * h))
+    color = np.asarray(full, np.float32)
+    save(outdir, "ads", color, np.zeros((N, N), np.float32), np.full((N, N), 0.3, np.float32), np.zeros((N, N), np.float32), 1.0)
+
+
+def dark(outdir: Path):
+    """Near-black for the tunnel mouth."""
+    noise = fbm(N, 8, 3, 9)
+    color = (rgb(14, 15, 20)[None, None, :] + ((noise - 0.5) * 6)[:, :, None])
+    save(outdir, "dark", color, noise * 0.1, np.full((N, N), 0.95, np.float32), np.zeros((N, N), np.float32), 1.0)
 
 
 def main() -> int:
@@ -209,6 +281,8 @@ def main() -> int:
     metal(outdir)
     roof(outdir)
     crowd(outdir)
+    ads(outdir)
+    dark(outdir)
     return 0
 
 
