@@ -457,23 +457,43 @@ function Controls.start()
 		return Enum.ContextActionResult.Pass
 	end)
 
-	bind("RS_Pass", CONTROLS.Pass, onPress(function()
-		doPass("Pass")
-	end))
-	bind("RS_Lob", CONTROLS.Lob, onPress(function()
-		doPass("Lob")
-	end))
+	bind(
+		"RS_Pass",
+		CONTROLS.Pass,
+		onPress(function()
+			doPass("Pass")
+		end)
+	)
+	bind(
+		"RS_Lob",
+		CONTROLS.Lob,
+		onPress(function()
+			doPass("Lob")
+		end)
+	)
 	bind("RS_Tackle", CONTROLS.Tackle, onPress(doTackle))
 	bind("RS_Dash", CONTROLS.Dash, onPress(doDash))
-	bind("RS_Ability1", CONTROLS.Ability1, onPress(function()
-		doAbility(1)
-	end))
-	bind("RS_Ability2", CONTROLS.Ability2, onPress(function()
-		doAbility(2)
-	end))
-	bind("RS_Ability3", CONTROLS.Ability3, onPress(function()
-		doAbility(3)
-	end))
+	bind(
+		"RS_Ability1",
+		CONTROLS.Ability1,
+		onPress(function()
+			doAbility(1)
+		end)
+	)
+	bind(
+		"RS_Ability2",
+		CONTROLS.Ability2,
+		onPress(function()
+			doAbility(2)
+		end)
+	)
+	bind(
+		"RS_Ability3",
+		CONTROLS.Ability3,
+		onPress(function()
+			doAbility(3)
+		end)
+	)
 
 	bind("RS_Sprint", CONTROLS.Sprint, function(_, inputState: Enum.UserInputState, input: InputObject)
 		local isTouch = input and input.UserInputType == Enum.UserInputType.Touch

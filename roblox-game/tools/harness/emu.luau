@@ -200,7 +200,16 @@ Emu.signalOf = signalOf
 ---------------------------------------------------------------------------
 
 local EVENTS = {
-	Instance = { "ChildAdded", "ChildRemoved", "DescendantAdded", "DescendantRemoving", "AncestryChanged", "Destroying", "AttributeChanged", "Changed" },
+	Instance = {
+		"ChildAdded",
+		"ChildRemoved",
+		"DescendantAdded",
+		"DescendantRemoving",
+		"AncestryChanged",
+		"Destroying",
+		"AttributeChanged",
+		"Changed",
+	},
 	RunService = { "Heartbeat", "Stepped", "RenderStepped", "PreSimulation", "PostSimulation", "PreRender" },
 	Players = { "PlayerAdded", "PlayerRemoving" },
 	Player = { "CharacterAdded", "CharacterRemoving" },
@@ -288,7 +297,9 @@ local function installMocks()
 			end
 			if Emu.now >= limit then
 				if not timeout then
-					Emu.recordError(string.format("WaitForChild: бесконечное ожидание %s.%s", self:GetFullName(), tostring(name)))
+					Emu.recordError(
+						string.format("WaitForChild: бесконечное ожидание %s.%s", self:GetFullName(), tostring(name))
+					)
 				end
 				return nil
 			end
@@ -375,7 +386,10 @@ local function installMocks()
 
 	-- RunService
 	roblox.implementMethod("RunService", "BindToRenderStep", function(_, name, priority, fn)
-		assert(type(name) == "string" and type(priority) == "number" and type(fn) == "function", "BindToRenderStep: неверные аргументы")
+		assert(
+			type(name) == "string" and type(priority) == "number" and type(fn) == "function",
+			"BindToRenderStep: неверные аргументы"
+		)
 		table.insert(Emu.renderSteps, { name = name, priority = priority, fn = fn })
 		table.sort(Emu.renderSteps, function(a, b)
 			return a.priority < b.priority
@@ -431,7 +445,10 @@ local function installMocks()
 	end)
 
 	roblox.implementMethod("ContextActionService", "BindAction", function(_, name, handler, touchButton, ...)
-		assert(type(name) == "string" and type(handler) == "function" and type(touchButton) == "boolean", "BindAction: неверные аргументы")
+		assert(
+			type(name) == "string" and type(handler) == "function" and type(touchButton) == "boolean",
+			"BindAction: неверные аргументы"
+		)
 		local inputs = table.pack(...)
 		assert(inputs.n > 0, "BindAction " .. name .. ": нет ни одной клавиши")
 		for i = 1, inputs.n do
@@ -693,7 +710,10 @@ local function makeSide(sideName: string)
 			new = function(time, style, direction)
 				assert(time == nil or type(time) == "number", "TweenInfo.new: время должно быть числом")
 				assert(style == nil or typeof(style) == "EnumItem", "TweenInfo.new: стиль должен быть Enum.EasingStyle")
-				assert(direction == nil or typeof(direction) == "EnumItem", "TweenInfo.new: направление должно быть Enum.EasingDirection")
+				assert(
+					direction == nil or typeof(direction) == "EnumItem",
+					"TweenInfo.new: направление должно быть Enum.EasingDirection"
+				)
 				return { __tweenInfo = true, Time = time or 1 }
 			end,
 		},
@@ -707,9 +727,13 @@ local function makeSide(sideName: string)
 		warn = function(...)
 			log("warn", ...)
 		end,
-		os = { clock = function()
-			return Emu.now
-		end, time = os.time, date = os.date },
+		os = {
+			clock = function()
+				return Emu.now
+			end,
+			time = os.time,
+			date = os.date,
+		},
 		tick = function()
 			return Emu.now
 		end,

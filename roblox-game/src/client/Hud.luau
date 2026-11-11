@@ -968,12 +968,22 @@ function Hud.start()
 		end
 		return list
 	end
-	ContextActionService:BindAction("RS_StyleMenu", press(function()
-		setMenu(not menu.Visible)
-	end), false, table.unpack(keys(Config.Controls.StyleMenu)))
-	ContextActionService:BindAction("RS_Help", press(function()
-		setHelp(not helpPanel.Visible)
-	end), false, table.unpack(keys(Config.Controls.Help)))
+	ContextActionService:BindAction(
+		"RS_StyleMenu",
+		press(function()
+			setMenu(not menu.Visible)
+		end),
+		false,
+		table.unpack(keys(Config.Controls.StyleMenu))
+	)
+	ContextActionService:BindAction(
+		"RS_Help",
+		press(function()
+			setHelp(not helpPanel.Visible)
+		end),
+		false,
+		table.unpack(keys(Config.Controls.Help))
+	)
 
 	-- На телефоне подсказка по клавишам не нужна.
 	setHelp(not UserInputService.TouchEnabled)

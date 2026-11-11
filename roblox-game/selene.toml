@@ -1,7 +1,5 @@
-std = "roblox"
+std = "roblox_min"
 
 [lints]
-# Чужие суффиксы файлов и стиль не проверяем — только настоящие ошибки.
-unused_variable = "warn"
 shadowing = "allow"
 multiple_statements = "allow"

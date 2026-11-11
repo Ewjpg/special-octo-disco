@@ -38,6 +38,8 @@ local joint: Motor6D? = nil
 local lift: VectorForce = nil :: any
 local ballMass = 1
 local gravityScale = BALL.GravityScale
+local gravityKickTime = 0 -- когда включили особую гравитацию удара
+local gravityRestoreAt = 0 -- когда вернуть обычную
 local forces = {} -- { fn = function(dt, part, t), expires = number }
 local needOwner = false
 local prevPos = Vector3.zero
@@ -239,7 +241,8 @@ function Ball.attach(actor)
 end
 
 -- Удар по мячу. Работает и для игрока с мячом, и для свободного мяча (вторая фаза способностей).
--- opts: kind, noPickup, untrappable, gravityScale, passTarget, color, colorTime
+-- opts: kind, noPickup, untrappable, gravityScale, gravityTime, passTarget, color, colorTime
+-- gravityScale действует временно: до первого касания газона или gravityTime секунд (по умолчанию 1.2).
 function Ball.kick(actor, velocity: Vector3, opts: { [string]: any }?)
 	local options = opts or {}
 	local part = Ball.part :: Part
@@ -275,6 +278,8 @@ function Ball.kick(actor, velocity: Vector3, opts: { [string]: any }?)
 	}
 	table.clear(forces)
 	gravityScale = options.gravityScale or BALL.GravityScale
+	gravityKickTime = t
+	gravityRestoreAt = t + (options.gravityTime or 1.2)
 	claimOwnership()
 	refreshLift()
 	if options.color then
@@ -494,6 +499,13 @@ function Ball.step(dt: number)
 	-- Сопротивление: по земле мяч тормозит сильнее, чем в воздухе.
 	local vel = part.AssemblyLinearVelocity
 	local grounded = rel.Y <= R + 0.35
+
+	-- Особая гравитация спец-удара заканчивается по времени или при первом касании газона.
+	if gravityScale ~= BALL.GravityScale then
+		if t >= gravityRestoreAt or (grounded and t - gravityKickTime > 0.15) then
+			Ball.setGravityScale(BALL.GravityScale)
+		end
+	end
 	local factor = math.max(0, 1 - (grounded and BALL.GroundDrag or BALL.AirDrag) * dt)
 	local horizontal = Vector3.new(vel.X * factor, 0, vel.Z * factor)
 	if grounded and horizontal.Magnitude < 0.6 then

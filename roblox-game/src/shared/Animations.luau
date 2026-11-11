@@ -331,15 +331,16 @@ local SLIDE = {
 	RightHip = { 26, 0, -4 },
 	RightKnee = { -4, 0, 0 },
 	RightAnkle = { -20, 0, 0 },
-	LeftHip = { -6, 0, -10 },
-	LeftKnee = { -84, 0, 0 },
+	LeftHip = { 50, 0, -12 },
+	LeftKnee = { -60, 0, 0 },
+	LeftAnkle = { 10, 0, 0 },
 	RightShoulder = { -64, 0, 24 },
 	RightElbow = { 20, 0, 0 },
 	LeftShoulder = { -52, 0, -30 },
 	LeftElbow = { 32, 0, 0 },
 }
 
--- Подкат: корпус отклонён назад, правая нога вытянута вперёд.
+-- Подкат: корпус отклонён назад, правая нога вытянута вперёд, левая согнута коленом вверх.
 Animations.Slide = {
 	length = 0.8,
 	fadeIn = 0.07,

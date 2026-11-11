@@ -425,15 +425,16 @@ local SLIDE = {
 	RightHip = { 26, 0, -4 },
 	RightKnee = { -4, 0, 0 },
 	RightAnkle = { -20, 0, 0 },
-	LeftHip = { -6, 0, -10 },
-	LeftKnee = { -84, 0, 0 },
+	LeftHip = { 50, 0, -12 },
+	LeftKnee = { -60, 0, 0 },
+	LeftAnkle = { 10, 0, 0 },
 	RightShoulder = { -64, 0, 24 },
 	RightElbow = { 20, 0, 0 },
 	LeftShoulder = { -52, 0, -30 },
 	LeftElbow = { 32, 0, 0 },
 }
 
--- Подкат: корпус отклонён назад, правая нога вытянута вперёд.
+-- Подкат: корпус отклонён назад, правая нога вытянута вперёд, левая согнута коленом вверх.
 Animations.Slide = {
 	length = 0.8,
 	fadeIn = 0.07,
@@ -1527,6 +1528,7 @@ return {
 						kind = "Shot",
 						untrappable = 2.4,
 						gravityScale = 0.6,
+						gravityTime = 2,
 						noPickup = 1.6,
 						color = COLOR,
 						colorTime = 3,
@@ -1547,6 +1549,7 @@ return {
 							kind = "Shot",
 							untrappable = 1.2,
 							gravityScale = 0,
+							gravityTime = 1,
 							noPickup = 0.8,
 							color = COLOR2,
 							colorTime = 2,
@@ -3005,6 +3008,8 @@ local joint: Motor6D? = nil
 local lift: VectorForce = nil :: any
 local ballMass = 1
 local gravityScale = BALL.GravityScale
+local gravityKickTime = 0 -- когда включили особую гравитацию удара
+local gravityRestoreAt = 0 -- когда вернуть обычную
 local forces = {} -- { fn = function(dt, part, t), expires = number }
 local needOwner = false
 local prevPos = Vector3.zero
@@ -3206,7 +3211,8 @@ function Ball.attach(actor)
 end
 
 -- Удар по мячу. Работает и для игрока с мячом, и для свободного мяча (вторая фаза способностей).
--- opts: kind, noPickup, untrappable, gravityScale, passTarget, color, colorTime
+-- opts: kind, noPickup, untrappable, gravityScale, gravityTime, passTarget, color, colorTime
+-- gravityScale действует временно: до первого касания газона или gravityTime секунд (по умолчанию 1.2).
 function Ball.kick(actor, velocity: Vector3, opts: { [string]: any }?)
 	local options = opts or {}
 	local part = Ball.part :: Part
@@ -3242,6 +3248,8 @@ function Ball.kick(actor, velocity: Vector3, opts: { [string]: any }?)
 	}
 	table.clear(forces)
 	gravityScale = options.gravityScale or BALL.GravityScale
+	gravityKickTime = t
+	gravityRestoreAt = t + (options.gravityTime or 1.2)
 	claimOwnership()
 	refreshLift()
 	if options.color then
@@ -3461,6 +3469,13 @@ function Ball.step(dt: number)
 	-- Сопротивление: по земле мяч тормозит сильнее, чем в воздухе.
 	local vel = part.AssemblyLinearVelocity
 	local grounded = rel.Y <= R + 0.35
+
+	-- Особая гравитация спец-удара заканчивается по времени или при первом касании газона.
+	if gravityScale ~= BALL.GravityScale then
+		if t >= gravityRestoreAt or (grounded and t - gravityKickTime > 0.15) then
+			Ball.setGravityScale(BALL.GravityScale)
+		end
+	end
 	local factor = math.max(0, 1 - (grounded and BALL.GroundDrag or BALL.AirDrag) * dt)
 	local horizontal = Vector3.new(vel.X * factor, 0, vel.Z * factor)
 	if grounded and horizontal.Magnitude < 0.6 then
@@ -4076,14 +4091,31 @@ local function buildGoal(root: Instance, side: number)
 
 	-- Невидимые стенки сетки: останавливают мяч.
 	local thick = 3
-	invisible(newPart(goal, "NetBack", Vector3.new(thick, h + thick, F.GoalWidth + thick * 2), at(backX + side * thick / 2, (h + thick) / 2, 0), WHITE))
+	invisible(
+		newPart(
+			goal,
+			"NetBack",
+			Vector3.new(thick, h + thick, F.GoalWidth + thick * 2),
+			at(backX + side * thick / 2, (h + thick) / 2, 0),
+			WHITE
+		)
+	)
 	invisible(newPart(goal, "NetTop", Vector3.new(F.GoalDepth, thick, F.GoalWidth + thick * 2), at(midX, h + thick / 2 + r, 0), WHITE))
 	for _, zs in ipairs({ -1, 1 }) do
-		invisible(newPart(goal, "NetSide", Vector3.new(F.GoalDepth - r * 2, h, thick), at(midX + side * r, h / 2, zs * (halfW + thick / 2)), WHITE))
+		invisible(
+			newPart(
+				goal,
+				"NetSide",
+				Vector3.new(F.GoalDepth - r * 2, h, thick),
+				at(midX + side * r, h / 2, zs * (halfW + thick / 2)),
+				WHITE
+			)
+		)
 	end
 
 	-- Светящаяся полоса в цвет команды за линией ворот.
-	local glow = newPart(goal, "GoalGlow", Vector3.new(1, 0.1, F.GoalWidth - 2), at(side * (HL + 1.6), 0.05, 0), team.Color, Enum.Material.Neon)
+	local glow =
+		newPart(goal, "GoalGlow", Vector3.new(1, 0.1, F.GoalWidth - 2), at(side * (HL + 1.6), 0.05, 0), team.Color, Enum.Material.Neon)
 	decor(glow)
 end
 
@@ -4124,12 +4156,20 @@ local function buildWalls(root: Instance)
 		for _, team in ipairs({ HOME, AWAY }) do
 			board(Vector3.new(ARENA_X, boardH, boardT), at(team.Side * ARENA_X / 2, boardH / 2, z), team.Color)
 		end
-		invisible(newPart(walls, "Wall", Vector3.new(ARENA_X * 2 + wallT * 2, wallH, wallT), at(0, wallH / 2, zs * (ARENA_Z + wallT / 2)), WHITE))
+		invisible(
+			newPart(walls, "Wall", Vector3.new(ARENA_X * 2 + wallT * 2, wallH, wallT), at(0, wallH / 2, zs * (ARENA_Z + wallT / 2)), WHITE)
+		)
 
 		-- Рекламные панели с названием игры.
 		local face = zs == 1 and Enum.NormalId.Front or Enum.NormalId.Back
 		for i = -2, 2 do
-			local panel = newPart(walls, "AdPanel", Vector3.new(44, 3.4, 0.2), at(i * 54, boardH / 2, zs * (ARENA_Z - 0.12)), Color3.fromRGB(14, 15, 20))
+			local panel = newPart(
+				walls,
+				"AdPanel",
+				Vector3.new(44, 3.4, 0.2),
+				at(i * 54, boardH / 2, zs * (ARENA_Z - 0.12)),
+				Color3.fromRGB(14, 15, 20)
+			)
 			decor(panel)
 			local color = i < 0 and HOME.Color or (i > 0 and AWAY.Color or WHITE)
 			addBoardText(panel, face, Config.GameTitle, color)
@@ -4140,7 +4180,9 @@ local function buildWalls(root: Instance)
 	for _, team in ipairs({ HOME, AWAY }) do
 		local s = team.Side
 		board(Vector3.new(boardT, boardH, ARENA_Z * 2 + boardT * 2), at(s * (ARENA_X + boardT / 2), boardH / 2, 0), team.Color)
-		invisible(newPart(walls, "Wall", Vector3.new(wallT, wallH, ARENA_Z * 2 + wallT * 2), at(s * (ARENA_X + wallT / 2), wallH / 2, 0), WHITE))
+		invisible(
+			newPart(walls, "Wall", Vector3.new(wallT, wallH, ARENA_Z * 2 + wallT * 2), at(s * (ARENA_X + wallT / 2), wallH / 2, 0), WHITE)
+		)
 	end
 
 	-- Скошенные углы, чтобы мяч не застревал.
@@ -4151,7 +4193,16 @@ local function buildWalls(root: Instance)
 			local cf = at(xs * (ARENA_X - cut / 2), 0, zs * (ARENA_Z - cut / 2)) * CFrame.Angles(0, math.rad(xs * zs * 45), 0)
 			local color = teamOfSide(xs).Color
 			newPart(walls, "CornerBoard", Vector3.new(length, boardH, boardT), cf * CFrame.new(0, boardH / 2, 0), DARK, Enum.Material.Metal)
-			decor(newPart(walls, "BoardLed", Vector3.new(length, 0.35, boardT + 0.02), cf * CFrame.new(0, boardH + 0.17, 0), color, Enum.Material.Neon))
+			decor(
+				newPart(
+					walls,
+					"BoardLed",
+					Vector3.new(length, 0.35, boardT + 0.02),
+					cf * CFrame.new(0, boardH + 0.17, 0),
+					color,
+					Enum.Material.Neon
+				)
+			)
 			invisible(newPart(walls, "CornerWall", Vector3.new(length, wallH, 4), cf * CFrame.new(0, wallH / 2, 0), WHITE))
 		end
 	end
@@ -4216,7 +4267,16 @@ local function buildStands(root: Instance)
 		local roofCf = at(0, roofY, roofZ) * CFrame.Angles(math.rad(zs * 10), 0, 0)
 		local roof = newPart(stands, "Roof", Vector3.new(sideLength + 30, 1.5, 44), roofCf, DARK, Enum.Material.Metal)
 		roof.CanCollide = false
-		decor(newPart(stands, "RoofLed", Vector3.new(sideLength + 30, 0.6, 0.8), roofCf * CFrame.new(0, -0.8, -zs * 21.5), WHITE, Enum.Material.Neon))
+		decor(
+			newPart(
+				stands,
+				"RoofLed",
+				Vector3.new(sideLength + 30, 0.6, 0.8),
+				roofCf * CFrame.new(0, -0.8, -zs * 21.5),
+				WHITE,
+				Enum.Material.Neon
+			)
+		)
 	end
 
 	-- Торцевые трибуны (за воротами).
@@ -4229,7 +4289,9 @@ local function buildStands(root: Instance)
 			local x = s * (ARENA_X + 8 + rowDepth * (row + 0.5))
 			local shade = row % 2 == 0 and CONCRETE or Color3.fromRGB(44, 46, 56)
 			newPart(stands, "Tier", Vector3.new(rowDepth, top, endLength), at(x, top / 2, 0), shade, Enum.Material.Concrete)
-			decor(newPart(stands, "Seats", Vector3.new(rowDepth - 1.6, 0.5, endLength - 2), at(x, top + 0.25, 0), team.Color:Lerp(DARK, 0.55)))
+			decor(
+				newPart(stands, "Seats", Vector3.new(rowDepth - 1.6, 0.5, endLength - 2), at(x, top + 0.25, 0), team.Color:Lerp(DARK, 0.55))
+			)
 			for z = -ARENA_Z + 3, ARENA_Z - 3, 5 do
 				if rng:NextNumber() < 0.55 then
 					fan(x, top + 0.5, z + rng:NextNumber() * 2, team)
@@ -4288,7 +4350,8 @@ local function buildLights(root: Instance)
 	for _, xs in ipairs({ -1, 1 }) do
 		for _, zs in ipairs({ -1, 1 }) do
 			local height = 96
-			local pole = newPart(lights, "Tower", Vector3.new(4, height, 4), at(xs * towerX, height / 2, zs * towerZ), DARK, Enum.Material.Metal)
+			local pole =
+				newPart(lights, "Tower", Vector3.new(4, height, 4), at(xs * towerX, height / 2, zs * towerZ), DARK, Enum.Material.Metal)
 			pole.CanCollide = false
 			local headPosition = O + Vector3.new(xs * towerX, height + 4, zs * towerZ)
 			local panelCf = CFrame.lookAt(headPosition, O)
@@ -5027,6 +5090,8 @@ return PlayerService
   <Item class="StarterPlayer" referent="28">
     <Properties>
       <string name="Name">StarterPlayer</string>
+      <float name="CameraMaxZoomDistance">40</float>
+      <float name="CameraMinZoomDistance">6</float>
     </Properties>
     <Item class="StarterPlayerScripts" referent="29">
       <Properties>
@@ -5164,7 +5229,7 @@ local function updateTrail(part: BasePart, held: boolean, speed: number)
 	end
 end
 
-local function onRender(dt: number)
+local function onRender()
 	local part = ball
 	local holder = anchor
 	if not part or not part.Parent or not holder then
@@ -5701,23 +5766,43 @@ function Controls.start()
 		return Enum.ContextActionResult.Pass
 	end)
 
-	bind("RS_Pass", CONTROLS.Pass, onPress(function()
-		doPass("Pass")
-	end))
-	bind("RS_Lob", CONTROLS.Lob, onPress(function()
-		doPass("Lob")
-	end))
+	bind(
+		"RS_Pass",
+		CONTROLS.Pass,
+		onPress(function()
+			doPass("Pass")
+		end)
+	)
+	bind(
+		"RS_Lob",
+		CONTROLS.Lob,
+		onPress(function()
+			doPass("Lob")
+		end)
+	)
 	bind("RS_Tackle", CONTROLS.Tackle, onPress(doTackle))
 	bind("RS_Dash", CONTROLS.Dash, onPress(doDash))
-	bind("RS_Ability1", CONTROLS.Ability1, onPress(function()
-		doAbility(1)
-	end))
-	bind("RS_Ability2", CONTROLS.Ability2, onPress(function()
-		doAbility(2)
-	end))
-	bind("RS_Ability3", CONTROLS.Ability3, onPress(function()
-		doAbility(3)
-	end))
+	bind(
+		"RS_Ability1",
+		CONTROLS.Ability1,
+		onPress(function()
+			doAbility(1)
+		end)
+	)
+	bind(
+		"RS_Ability2",
+		CONTROLS.Ability2,
+		onPress(function()
+			doAbility(2)
+		end)
+	)
+	bind(
+		"RS_Ability3",
+		CONTROLS.Ability3,
+		onPress(function()
+			doAbility(3)
+		end)
+	)
 
 	bind("RS_Sprint", CONTROLS.Sprint, function(_, inputState: Enum.UserInputState, input: InputObject)
 		local isTouch = input and input.UserInputType == Enum.UserInputType.Touch
@@ -5792,7 +5877,14 @@ local function effects(): Folder
 	return created
 end
 
-local function newPart(shape: Enum.PartType, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material, transparency: number): Part
+local function newPart(
+	shape: Enum.PartType,
+	size: Vector3,
+	cframe: CFrame,
+	color: Color3,
+	material: Enum.Material,
+	transparency: number
+): Part
 	local part = Instance.new("Part")
 	part.Name = "Fx"
 	part.Anchored = true
@@ -5979,7 +6071,8 @@ function Fx.beam(a: any, b: any, color: Color3, options: { [string]: any }?)
 	local function attachmentFor(target: any): Attachment
 		local attachment = Instance.new("Attachment")
 		if typeof(target) == "Vector3" then
-			local holder = newPart(Enum.PartType.Block, Vector3.new(0.2, 0.2, 0.2), CFrame.new(target), color, Enum.Material.SmoothPlastic, 1)
+			local holder =
+				newPart(Enum.PartType.Block, Vector3.new(0.2, 0.2, 0.2), CFrame.new(target), color, Enum.Material.SmoothPlastic, 1)
 			attachment.Parent = holder
 			table.insert(cleanup, holder)
 		else
@@ -6067,7 +6160,9 @@ function Fx.charTrail(character: Model?, color: Color3, duration: number)
 	if not character then
 		return
 	end
-	local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso") or character:FindFirstChild("HumanoidRootPart")
+	local torso = character:FindFirstChild("UpperTorso")
+		or character:FindFirstChild("Torso")
+		or character:FindFirstChild("HumanoidRootPart")
 	if not torso then
 		return
 	end
@@ -6130,15 +6225,10 @@ function Fx.zone(position: Vector3, color: Color3, options: { [string]: any }?)
 	local o = options or {}
 	local radius, time = o.radius or 30, o.time or 4
 	local shell = newPart(Enum.PartType.Ball, Vector3.new(2, 2, 2), CFrame.new(position), color, Enum.Material.ForceField, 0)
-	local core = newPart(Enum.PartType.Ball, Vector3.new(1, 1, 1), CFrame.new(position), o.core or Color3.new(0, 0, 0), Enum.Material.Neon, 0.15)
-	local floor = newPart(
-		Enum.PartType.Cylinder,
-		Vector3.new(0.12, 2, 2),
-		CFrame.new(Fx.ground(position)) * FLAT,
-		color,
-		Enum.Material.Neon,
-		0.75
-	)
+	local core =
+		newPart(Enum.PartType.Ball, Vector3.new(1, 1, 1), CFrame.new(position), o.core or Color3.new(0, 0, 0), Enum.Material.Neon, 0.15)
+	local floor =
+		newPart(Enum.PartType.Cylinder, Vector3.new(0.12, 2, 2), CFrame.new(Fx.ground(position)) * FLAT, color, Enum.Material.Neon, 0.75)
 	tween(shell, 0.4, { Size = Vector3.new(radius * 2, radius * 2, radius * 2) }, Enum.EasingStyle.Back)
 	tween(core, 0.4, { Size = Vector3.new(7, 7, 7) }, Enum.EasingStyle.Back)
 	tween(floor, 0.4, { Size = Vector3.new(0.12, radius * 2, radius * 2) })
@@ -7511,12 +7601,22 @@ function Hud.start()
 		end
 		return list
 	end
-	ContextActionService:BindAction("RS_StyleMenu", press(function()
-		setMenu(not menu.Visible)
-	end), false, table.unpack(keys(Config.Controls.StyleMenu)))
-	ContextActionService:BindAction("RS_Help", press(function()
-		setHelp(not helpPanel.Visible)
-	end), false, table.unpack(keys(Config.Controls.Help)))
+	ContextActionService:BindAction(
+		"RS_StyleMenu",
+		press(function()
+			setMenu(not menu.Visible)
+		end),
+		false,
+		table.unpack(keys(Config.Controls.StyleMenu))
+	)
+	ContextActionService:BindAction(
+		"RS_Help",
+		press(function()
+			setHelp(not helpPanel.Visible)
+		end),
+		false,
+		table.unpack(keys(Config.Controls.Help))
+	)
 
 	-- На телефоне подсказка по клавишам не нужна.
 	setHelp(not UserInputService.TouchEnabled)
@@ -7928,5 +8028,12 @@ return State
         </Item>
       </Item>
     </Item>
+  </Item>
+  <Item class="Workspace" referent="40">
+    <Properties>
+      <string name="Name">Workspace</string>
+      <bool name="NeedsPivotMigration">false</bool>
+      <bool name="StreamingEnabled">false</bool>
+    </Properties>
   </Item>
 </roblox>

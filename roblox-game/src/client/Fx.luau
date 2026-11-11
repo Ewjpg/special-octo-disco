@@ -32,7 +32,14 @@ local function effects(): Folder
 	return created
 end
 
-local function newPart(shape: Enum.PartType, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material, transparency: number): Part
+local function newPart(
+	shape: Enum.PartType,
+	size: Vector3,
+	cframe: CFrame,
+	color: Color3,
+	material: Enum.Material,
+	transparency: number
+): Part
 	local part = Instance.new("Part")
 	part.Name = "Fx"
 	part.Anchored = true
@@ -219,7 +226,8 @@ function Fx.beam(a: any, b: any, color: Color3, options: { [string]: any }?)
 	local function attachmentFor(target: any): Attachment
 		local attachment = Instance.new("Attachment")
 		if typeof(target) == "Vector3" then
-			local holder = newPart(Enum.PartType.Block, Vector3.new(0.2, 0.2, 0.2), CFrame.new(target), color, Enum.Material.SmoothPlastic, 1)
+			local holder =
+				newPart(Enum.PartType.Block, Vector3.new(0.2, 0.2, 0.2), CFrame.new(target), color, Enum.Material.SmoothPlastic, 1)
 			attachment.Parent = holder
 			table.insert(cleanup, holder)
 		else
@@ -307,7 +315,9 @@ function Fx.charTrail(character: Model?, color: Color3, duration: number)
 	if not character then
 		return
 	end
-	local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso") or character:FindFirstChild("HumanoidRootPart")
+	local torso = character:FindFirstChild("UpperTorso")
+		or character:FindFirstChild("Torso")
+		or character:FindFirstChild("HumanoidRootPart")
 	if not torso then
 		return
 	end
@@ -370,15 +380,10 @@ function Fx.zone(position: Vector3, color: Color3, options: { [string]: any }?)
 	local o = options or {}
 	local radius, time = o.radius or 30, o.time or 4
 	local shell = newPart(Enum.PartType.Ball, Vector3.new(2, 2, 2), CFrame.new(position), color, Enum.Material.ForceField, 0)
-	local core = newPart(Enum.PartType.Ball, Vector3.new(1, 1, 1), CFrame.new(position), o.core or Color3.new(0, 0, 0), Enum.Material.Neon, 0.15)
-	local floor = newPart(
-		Enum.PartType.Cylinder,
-		Vector3.new(0.12, 2, 2),
-		CFrame.new(Fx.ground(position)) * FLAT,
-		color,
-		Enum.Material.Neon,
-		0.75
-	)
+	local core =
+		newPart(Enum.PartType.Ball, Vector3.new(1, 1, 1), CFrame.new(position), o.core or Color3.new(0, 0, 0), Enum.Material.Neon, 0.15)
+	local floor =
+		newPart(Enum.PartType.Cylinder, Vector3.new(0.12, 2, 2), CFrame.new(Fx.ground(position)) * FLAT, color, Enum.Material.Neon, 0.75)
 	tween(shell, 0.4, { Size = Vector3.new(radius * 2, radius * 2, radius * 2) }, Enum.EasingStyle.Back)
 	tween(core, 0.4, { Size = Vector3.new(7, 7, 7) }, Enum.EasingStyle.Back)
 	tween(floor, 0.4, { Size = Vector3.new(0.12, radius * 2, radius * 2) })

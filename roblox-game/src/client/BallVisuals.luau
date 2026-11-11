@@ -123,7 +123,7 @@ local function updateTrail(part: BasePart, held: boolean, speed: number)
 	end
 end
 
-local function onRender(dt: number)
+local function onRender()
 	local part = ball
 	local holder = anchor
 	if not part or not part.Parent or not holder then

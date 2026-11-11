@@ -67,7 +67,11 @@ check("мяч создан", workspace:FindFirstChild("Ball") ~= nil)
 check("RemoteEvents созданы", ReplicatedStorage:FindFirstChild("Remotes") ~= nil)
 local matchState = ReplicatedStorage:FindFirstChild("MatchState")
 check("MatchState создан", matchState ~= nil)
-check("фаза Waiting без игроков", matchState and matchState:GetAttribute("Phase") == "Waiting", matchState and matchState:GetAttribute("Phase"))
+check(
+	"фаза Waiting без игроков",
+	matchState and matchState:GetAttribute("Phase") == "Waiting",
+	matchState and matchState:GetAttribute("Phase")
+)
 check("стилей в меню: 4", #Styles.list == 4, #Styles.list)
 
 Emu.adoptCharacters()
@@ -218,7 +222,11 @@ Emu.input("RS_Shoot", Enum.UserInputState.End, Enum.UserInputType.MouseButton1)
 Emu.run(0.1)
 check("мяч выбит", not hasBall(alice))
 local shotSpeed = ballPart().AssemblyLinearVelocity.Magnitude
-check("скорость удара в разумных пределах", shotSpeed > 80 and shotSpeed < 170, string.format("%.1f", shotSpeed))
+check(
+	"скорость удара в разумных пределах",
+	shotSpeed > 80 and shotSpeed < 170,
+	string.format("%.1f", shotSpeed)
+)
 
 local outcome = "мяч в игре"
 Emu.runUntil(5, function()
@@ -247,11 +255,215 @@ local function giveBall(player)
 	Ball.attach(actor)
 end
 
-local function dropBallNear(player, distance: number)
-	local origin = rootOf(player).CFrame.Position
-	Ball.reset(Vector3.new(origin.X - attackX * distance, 1.3, origin.Z), false)
-	Ball.active = true
+-- Соперник и партнёр нужны для проверки способностей; пока стоят в стороне.
+local bob = Emu.addPlayer("Bob", 202)
+local carol = Emu.addPlayer("Carol", 303)
+Emu.run(0.8)
+local actorBob = Actors.ofPlayer(bob)
+local actorCarol = Actors.ofPlayer(carol)
+check(
+	"второй игрок в другой команде",
+	actorBob ~= nil and actorBob.team ~= actorAlice.team,
+	actorBob and actorBob.team
+)
+check(
+	"третий игрок — партнёр",
+	actorCarol ~= nil and actorCarol.team == actorAlice.team,
+	actorCarol and actorCarol.team
+)
+
+local function parkOthers()
+	place(bob, Vector3.new(-70, 0, -70), Vector3.new(0, 0, -70))
+	place(carol, Vector3.new(-90, 0, 70), Vector3.new(0, 0, 70))
 end
+
+local enemyGoal = F.goalCenter(-actorAlice.side)
+
+-- Особая подготовка и проверка результата для каждой способности.
+-- prepare() вызывается перед нажатием, verify() — сразу после (сама крутит время и возвращает ok, подробности).
+local scenarios = {}
+
+scenarios.CometShot = {
+	verify = function()
+		local top = 0
+		Emu.run(0.7, function()
+			if not hasBall(alice) then
+				top = math.max(top, ballPart().AssemblyLinearVelocity.Magnitude)
+			end
+		end)
+		return top > 180, string.format("макс. скорость мяча %.0f", top)
+	end,
+}
+
+scenarios.Afterburner = {
+	verify = function(from)
+		Emu.run(0.5)
+		local moved = (rootOf(alice).CFrame.Position - from).Magnitude
+		return moved > 20 and hasBall(alice),
+			string.format("рывок на %.1f, мяч при себе: %s", moved, tostring(hasBall(alice)))
+	end,
+}
+
+scenarios.Meteor = {
+	verify = function()
+		local height, top = 0, 0
+		local t0 = Emu.now
+		Emu.run(1.6, function()
+			height = math.max(height, ballPos().Y)
+			top = math.max(top, ballPart().AssemblyLinearVelocity.Magnitude)
+			if process.env.TRACE then
+				local v = ballPart().AssemblyLinearVelocity
+				print(
+					string.format(
+						"    t=%.2f y=%.1f z=%.1f vy=%.1f |v|=%.1f held=%s lift=%.1f",
+						Emu.now - t0,
+						ballPos().Y,
+						ballPos().Z,
+						v.Y,
+						v.Magnitude,
+						tostring(hasBall(alice)),
+						ballPart().Lift.Force.Y
+					)
+				)
+			end
+		end)
+		return height > 20 and top > 200, string.format("высота %.0f, скорость падения %.0f", height, top)
+	end,
+}
+
+scenarios.PhantomStep = {
+	verify = function(from)
+		Emu.run(0.15)
+		local moved = (rootOf(alice).CFrame.Position - from).Magnitude
+		local immune = Actors.isImmune(Actors.ofPlayer(alice))
+		return moved > 17 and moved < 23 and hasBall(alice) and immune,
+			string.format("перенос на %.1f, неуязвим: %s", moved, tostring(immune))
+	end,
+}
+
+scenarios.MirrorCurve = {
+	verify = function()
+		-- Игрок целится вдоль +Z из центра, значит боковое смещение мяча — это X.
+		local minX, maxX = 0, 0
+		Emu.run(1, function()
+			local x = ballPos().X
+			minX, maxX = math.min(minX, x), math.max(maxX, x)
+		end)
+		return (maxX - minX) > 6 and not hasBall(alice),
+			string.format("мяч гулял по дуге на %.1f в ширину", maxX - minX)
+	end,
+}
+
+scenarios.HallOfMirrors = {
+	verify = function()
+		Emu.run(0.4)
+		local actor = Actors.ofPlayer(alice)
+		local unstoppable = Actors.hasFlag(actor, "unstoppableUntil")
+		local faster = actor.speedMods.Mirrors ~= nil
+		local stunned = Actors.stun(actor, 1)
+		return unstoppable and faster and not stunned,
+			string.format(
+				"неуязвимость %s, ускорение %s, оглушить нельзя %s",
+				tostring(unstoppable),
+				tostring(faster),
+				tostring(not stunned)
+			)
+	end,
+}
+
+scenarios.Pull = {
+	prepare = function()
+		Ball.reset(Vector3.new(0, 1.3, 40), false)
+		Ball.active = true
+	end,
+	verify = function()
+		local got = Emu.runUntil(2, function()
+			return hasBall(alice)
+		end)
+		return got, "мяч с 40 шагов притянут: " .. tostring(got)
+	end,
+}
+
+scenarios.Orbit = {
+	prepare = function()
+		-- Целимся мимо ворот (на 9 шагов шире штанги): удар должен сам довернуть в створ.
+		local from = Vector3.new(enemyGoal.X - attackX * 75, 0, 20)
+		place(alice, from, Vector3.new(enemyGoal.X, 0, 25))
+		local target = Vector3.new(enemyGoal.X, 3, 25)
+		local back = (Vector3.new(from.X, 0, from.Z) - Vector3.new(target.X, 0, target.Z)).Unit
+		aimCamera(Vector3.new(from.X, 9, from.Z) + back * 14, target)
+		giveBall(alice)
+	end,
+	verify = function()
+		local scored = Emu.runUntil(3, function()
+			return phase() == "Goal"
+		end)
+		return scored, "удар мимо створа довернул в ворота: " .. tostring(scored)
+	end,
+}
+
+scenarios.Singularity = {
+	prepare = function()
+		Ball.reset(Vector3.new(0, 1.3, 30), false)
+		Ball.active = true
+		Actors.ofPlayer(alice).noPickupUntil = 0
+		place(bob, Vector3.new(6, 0, 18), Vector3.new(0, 0, 0))
+	end,
+	verify = function()
+		Emu.run(0.5)
+		local slowed = Actors.ofPlayer(bob).speedMods.Singularity ~= nil
+		local got = Emu.runUntil(4, function()
+			return hasBall(alice)
+		end)
+		return slowed and got,
+			string.format("соперник замедлен %s, мяч притянут %s", tostring(slowed), tostring(got))
+	end,
+}
+
+scenarios.Ram = {
+	prepare = function()
+		place(bob, Vector3.new(0, 0, 14), Vector3.new(0, 0, 60))
+		giveBall(bob)
+	end,
+	verify = function()
+		Emu.run(0.7)
+		local took = hasBall(alice)
+		local stunned = Actors.isStunned(Actors.ofPlayer(bob))
+		return took and stunned,
+			string.format("мяч отобран %s, соперник оглушён %s", tostring(took), tostring(stunned))
+	end,
+}
+
+scenarios.Barrier = {
+	verify = function()
+		Emu.run(0.3)
+		local wall = workspace:FindFirstChild("Barrier")
+		local built = wall ~= nil and wall.CollisionGroup == "BallOnly" and #wall:GetChildren() == 4
+		Emu.run(4)
+		local gone = workspace:FindFirstChild("Barrier") == nil
+		return built and gone,
+			string.format("стена поставлена %s, исчезла через 3.5 с %s", tostring(built), tostring(gone))
+	end,
+}
+
+scenarios.Citadel = {
+	prepare = function()
+		-- Соперник бьёт «неберущимся» ударом в игрока: под Цитаделью мяч всё равно должен прилипнуть.
+		place(bob, Vector3.new(0, 0, 45), Vector3.new(0, 0, 0))
+		Ball.reset(Vector3.new(0, 1.3, 30), false)
+		Ball.active = true
+	end,
+	verify = function()
+		Emu.run(0.5)
+		giveBall(bob)
+		Emu.run(0.1)
+		Ball.kick(Actors.ofPlayer(bob), Vector3.new(0, 4, -215), { kind = "Shot", untrappable = 2 })
+		local got = Emu.runUntil(1.5, function()
+			return hasBall(alice)
+		end)
+		return got, "неберущийся удар принят: " .. tostring(got)
+	end,
+}
 
 for _, style in ipairs(Styles.list) do
 	check("матч идёт перед тестом стиля " .. style.id, waitLive(40), phase())
@@ -260,41 +472,50 @@ for _, style in ipairs(Styles.list) do
 		Emu.run(0.2)
 	end
 	check("стиль выбран: " .. style.id, alice:GetAttribute("Style") == style.id, alice:GetAttribute("Style"))
+	check("характеристики стиля применены", Actors.ofPlayer(alice).style.id == style.id)
 	Emu.run(4.3) -- перезарядка после смены стиля
 
 	for slot = 1, 3 do
 		waitLive(40)
 		local ability = style.abilities[slot]
+		local scenario = scenarios[ability.id] or {}
 		local actor = Actors.ofPlayer(alice)
 		actor.data.resonance = 100
 		actor.stamina = actor.staminaMax
 		actor.stunnedUntil = 0
-		-- Встаём в центре поля и смотрим вдоль боковой линии, чтобы удары не заканчивались голом.
+		parkOthers()
+		-- По умолчанию: в центре поля, взгляд вдоль боковой линии — чтобы удары не заканчивались голом.
 		place(alice, Vector3.new(0, 0, 0), Vector3.new(0, 0, 60))
 		aimCamera(Vector3.new(0, 9, -14), Vector3.new(0, 4, 60))
 		setKeepersFrozen(true)
 		if ability.needsNoBall then
-			if hasBall(alice) then
-				Ball.reset(Vector3.new(0, 1.3, 30), false)
-			end
-			dropBallNear(alice, 0)
 			Ball.reset(Vector3.new(0, 1.3, 30), false)
 			Ball.active = true
 			actor.noPickupUntil = Actors.now() + 0.4
 		else
 			giveBall(alice)
 		end
+		if scenario.prepare then
+			scenario.prepare()
+		end
 		Emu.run(0.25)
 
 		local before = alice:GetAttribute("CD_A" .. slot) or 0
 		local errorsBefore = #Emu.errors
 		local warningsBefore = #Emu.warnings
+		local label = string.format("%s / %s «%s»", style.id, ability.id, ability.name)
+		local startPosition = rootOf(alice).CFrame.Position
 		Emu.tap("RS_Ability" .. slot)
-		Emu.run(0.3)
+		Emu.run(0.1)
 		local after = alice:GetAttribute("CD_A" .. slot) or 0
-		local label = string.format("%s / %s (%s)", style.id, ability.id, ability.name)
-		check("способность сработала: " .. label, after > before and after > Actors.now())
-		Emu.run(ability.ultimate and 3 or 1.6)
+		check("сервер принял: " .. label, after > before and after > Actors.now())
+		if scenario.verify then
+			local ok, detail = scenario.verify(startPosition)
+			check("эффект: " .. label, ok, detail)
+		else
+			Emu.run(1.6)
+		end
+		Emu.run(ability.ultimate and 2 or 1)
 		check("без ошибок: " .. label, #Emu.errors == errorsBefore and #Emu.warnings == warningsBefore, #Emu.errors - errorsBefore)
 		if ability.ultimate then
 			check("ульта тратит резонанс: " .. ability.id, (Actors.ofPlayer(alice).data.resonance or 0) < 20)
@@ -304,15 +525,34 @@ for _, style in ipairs(Styles.list) do
 	Emu.run(6) -- дать эффектам и длительным способностям закончиться
 end
 
+-- Условия применения проверяет и сервер.
+waitLive(40)
+parkOthers()
+do
+	local actor = Actors.ofPlayer(alice)
+	actor.data.resonance = 10
+	actor.data.cooldowns.A3 = 0
+	alice:SetAttribute("CD_A3", 0)
+	Emu.run(0.3)
+	local before = alice:GetAttribute("CD_A3") or 0
+	ClientState.send("Ability", 3, Vector3.new(0, 0, 1), Vector3.zero)
+	Emu.run(0.3)
+	check("ульта без резонанса отклоняется сервером", (alice:GetAttribute("CD_A3") or 0) == before)
+	ClientState.send("Ability", 7, Vector3.new(0, 0, 1), Vector3.zero)
+	ClientState.send("Ability", "x", "мусор", 5)
+	ClientState.send("Shoot", "не вектор", 99)
+	ClientState.send("SelectStyle", "Keeper")
+	ClientState.send("SelectStyle", 42)
+	ClientState.send("НетТакого", 1)
+	Emu.run(0.3)
+	check("служебный стиль выбрать нельзя", alice:GetAttribute("Style") ~= "Keeper", alice:GetAttribute("Style"))
+end
+
 ---------------------------------------------------------------------------
 section("Подкат, финт, пас")
 ---------------------------------------------------------------------------
 
 waitLive(40)
-local bob = Emu.addPlayer("Bob", 202)
-Emu.run(0.6)
-local actorBob = Actors.ofPlayer(bob)
-check("второй игрок в другой команде", actorBob ~= nil and actorBob.team ~= actorAlice.team, actorBob and actorBob.team)
 
 local function resetDuel()
 	waitLive(40)
@@ -321,6 +561,7 @@ local function resetDuel()
 	a.stunnedUntil = 0
 	a.data.cooldowns.Tackle = 0
 	alice:SetAttribute("CD_Tackle", 0)
+	place(carol, Vector3.new(-90, 0, 70), Vector3.new(0, 0, 70))
 	place(bob, Vector3.new(0, 0, -40), Vector3.new(-20, 0, -40))
 	place(alice, Vector3.new(-7, 0, -40), Vector3.new(0, 0, -40))
 	giveBall(bob)
@@ -347,10 +588,6 @@ Emu.run(3)
 
 -- Пас партнёру.
 waitLive(40)
-local carol = Emu.addPlayer("Carol", 303)
-Emu.run(0.6)
-local actorCarol = Actors.ofPlayer(carol)
-check("третий игрок — партнёр", actorCarol ~= nil and actorCarol.team == actorAlice.team, actorCarol and actorCarol.team)
 place(bob, Vector3.new(-60, 0, 60), Vector3.new(0, 0, 60))
 place(alice, Vector3.new(0, 0, 0), Vector3.new(40, 0, 6))
 place(carol, Vector3.new(40, 0, 6), Vector3.new(0, 0, 0))
@@ -379,6 +616,25 @@ end)
 check("навес летит высоко", peak > 8, string.format("высота %.1f", peak))
 check("навес дошёл до партнёра", lobbed)
 
+-- Блок: быстрый удар соперника попадает в игрока — принять нельзя, мяч отлетает.
+waitLive(40)
+place(carol, Vector3.new(-90, 0, 70), Vector3.new(0, 0, 70))
+place(alice, Vector3.new(0, 0, 0), Vector3.new(0, 0, 60))
+place(bob, Vector3.new(0, 0, 40), Vector3.new(0, 0, 0))
+Actors.ofPlayer(alice).noPickupUntil = 0
+giveBall(bob)
+Emu.run(0.1)
+local blocksBefore = Emu.remoteLog["<-Block"] or 0
+Ball.kick(Actors.ofPlayer(bob), Vector3.new(0, 3, -180), { kind = "Shot" })
+Emu.run(0.6)
+check("быстрый удар отбит, а не принят", (Emu.remoteLog["<-Block"] or 0) > blocksBefore and not hasBall(alice))
+check(
+	"отбитый мяч летит обратно",
+	ballPart().AssemblyLinearVelocity.Z > 0 or ballPos().Z > 2,
+	string.format("vz=%.1f", ballPart().AssemblyLinearVelocity.Z)
+)
+Emu.run(2)
+
 -- Рывок.
 waitLive(40)
 place(alice, Vector3.new(-20, 0, 20), Vector3.new(20, 0, 20))
@@ -398,7 +654,8 @@ waitLive(40)
 local homeBefore = matchState:GetAttribute("Home")
 local awayBefore = matchState:GetAttribute("Away")
 setKeepersFrozen(true)
-local enemyGoal = F.goalCenter(-actorAlice.side)
+place(bob, Vector3.new(-70, 0, -70), Vector3.new(0, 0, -70))
+place(carol, Vector3.new(-90, 0, 70), Vector3.new(0, 0, 70))
 place(alice, Vector3.new(enemyGoal.X - attackX * 10, 0, 8), enemyGoal + Vector3.new(0, 0, 8))
 giveBall(alice)
 Emu.run(0.1)
@@ -408,15 +665,31 @@ local scored = Emu.runUntil(2, function()
 end)
 check("гол засчитан", scored, phase())
 local scoreKey = actorAlice.team
-check("счёт вырос", matchState:GetAttribute(scoreKey) == (scoreKey == "Home" and homeBefore or awayBefore) + 1, string.format("%s:%s", tostring(matchState:GetAttribute("Home")), tostring(matchState:GetAttribute("Away"))))
+check(
+	"счёт вырос",
+	matchState:GetAttribute(scoreKey) == (scoreKey == "Home" and homeBefore or awayBefore) + 1,
+	string.format("%s:%s", tostring(matchState:GetAttribute("Home")), tostring(matchState:GetAttribute("Away")))
+)
 check("событие Goal отправлено", (Emu.remoteLog["<-Goal"] or 0) >= 1)
-check("резонанс за гол", Actors.ofPlayer(alice).data.resonance >= Config.Resonance.Goal - 1, Actors.ofPlayer(alice).data.resonance)
+check(
+	"резонанс за гол",
+	Actors.ofPlayer(alice).data.resonance >= Config.Resonance.Goal - 1,
+	Actors.ofPlayer(alice).data.resonance
+)
 setKeepersFrozen(false)
-check("после гола новый розыгрыш", Emu.runUntil(15, function()
-	return phase() == "Kickoff"
-end), phase())
+check(
+	"после гола новый розыгрыш",
+	Emu.runUntil(15, function()
+		return phase() == "Kickoff"
+	end),
+	phase()
+)
 local center = ballPos()
-check("мяч вернулся в центр", math.abs(center.X) < 1 and math.abs(center.Z) < 1 and ballPart().Anchored, string.format("%.1f %.1f", center.X, center.Z))
+check(
+	"мяч вернулся в центр",
+	math.abs(center.X) < 1 and math.abs(center.Z) < 1 and ballPart().Anchored,
+	string.format("%.1f %.1f", center.X, center.Z)
+)
 check("игра продолжается", waitLive(10), phase())
 
 ---------------------------------------------------------------------------
@@ -464,8 +737,14 @@ Emu.run(0.2)
 local errorsBefore = #Emu.errors
 Emu.spawnCharacter(alice)
 Emu.run(1.5)
-check("после респауна новый актёр", Actors.ofPlayer(alice) ~= nil and Actors.ofPlayer(alice).character == alice.Character)
-check("мяч освободился после смерти владельца", Ball.holder == nil and ballPart():FindFirstChild("BallJoint") == nil)
+check(
+	"после респауна новый актёр",
+	Actors.ofPlayer(alice) ~= nil and Actors.ofPlayer(alice).character == alice.Character
+)
+check(
+	"мяч освободился после смерти владельца",
+	Ball.holder == nil and ballPart():FindFirstChild("BallJoint") == nil
+)
 check("мяч можно столкнуть (CanCollide)", ballPart().CanCollide == true)
 check("респаун без ошибок", #Emu.errors == errorsBefore, #Emu.errors - errorsBefore)
 
@@ -482,13 +761,21 @@ section("Финальный свисток и новый матч")
 
 waitLive(40)
 Match.timeLeft = 1
-check("финальный свисток", Emu.runUntil(6, function()
-	return phase() == "FullTime"
-end), phase())
+check(
+	"финальный свисток",
+	Emu.runUntil(6, function()
+		return phase() == "FullTime"
+	end),
+	phase()
+)
 check("событие FullTime отправлено", (Emu.remoteLog["<-FullTime"] or 0) >= 1)
-check("новый матч начался", Emu.runUntil(30, function()
-	return phase() == "Playing"
-end), phase())
+check(
+	"новый матч начался",
+	Emu.runUntil(30, function()
+		return phase() == "Playing"
+	end),
+	phase()
+)
 check("счёт обнулён", matchState:GetAttribute("Home") == 0 and matchState:GetAttribute("Away") == 0)
 Emu.run(5)
 
@@ -573,7 +860,15 @@ for _, result in ipairs(results) do
 		failed += 1
 	end
 end
-print(string.format("\nИТОГ: проверок %d, провалено %d, ошибок выполнения %d, предупреждений %d", #results, failed, #Emu.errors, #Emu.warnings))
+print(
+	string.format(
+		"\nИТОГ: проверок %d, провалено %d, ошибок выполнения %d, предупреждений %d",
+		#results,
+		failed,
+		#Emu.errors,
+		#Emu.warnings
+	)
+)
 if failed > 0 or #Emu.errors > 0 then
 	process.exit(1)
 end

@@ -1,0 +1,63 @@
+# Минимальный список глобальных имён Roblox для линтера Selene.
+# Полный стандарт (selene generate-roblox-std) точнее; этот нужен там, где его не скачать.
+base: luau
+name: roblox_min
+globals:
+  game:
+    any: true
+  workspace:
+    any: true
+  script:
+    any: true
+  Instance:
+    any: true
+  Enum:
+    any: true
+  Vector3:
+    any: true
+  Vector2:
+    any: true
+  CFrame:
+    any: true
+  Color3:
+    any: true
+  UDim:
+    any: true
+  UDim2:
+    any: true
+  BrickColor:
+    any: true
+  TweenInfo:
+    any: true
+  NumberSequence:
+    any: true
+  NumberSequenceKeypoint:
+    any: true
+  ColorSequence:
+    any: true
+  ColorSequenceKeypoint:
+    any: true
+  NumberRange:
+    any: true
+  PhysicalProperties:
+    any: true
+  Random:
+    any: true
+  RaycastParams:
+    any: true
+  task:
+    any: true
+  typeof:
+    args:
+      - type: any
+  warn:
+    args:
+      - type: "..."
+  tick:
+    args: []
+  time:
+    args: []
+  wait:
+    args:
+      - required: false
+        type: number

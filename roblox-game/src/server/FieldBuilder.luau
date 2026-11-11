@@ -257,14 +257,31 @@ local function buildGoal(root: Instance, side: number)
 
 	-- Невидимые стенки сетки: останавливают мяч.
 	local thick = 3
-	invisible(newPart(goal, "NetBack", Vector3.new(thick, h + thick, F.GoalWidth + thick * 2), at(backX + side * thick / 2, (h + thick) / 2, 0), WHITE))
+	invisible(
+		newPart(
+			goal,
+			"NetBack",
+			Vector3.new(thick, h + thick, F.GoalWidth + thick * 2),
+			at(backX + side * thick / 2, (h + thick) / 2, 0),
+			WHITE
+		)
+	)
 	invisible(newPart(goal, "NetTop", Vector3.new(F.GoalDepth, thick, F.GoalWidth + thick * 2), at(midX, h + thick / 2 + r, 0), WHITE))
 	for _, zs in ipairs({ -1, 1 }) do
-		invisible(newPart(goal, "NetSide", Vector3.new(F.GoalDepth - r * 2, h, thick), at(midX + side * r, h / 2, zs * (halfW + thick / 2)), WHITE))
+		invisible(
+			newPart(
+				goal,
+				"NetSide",
+				Vector3.new(F.GoalDepth - r * 2, h, thick),
+				at(midX + side * r, h / 2, zs * (halfW + thick / 2)),
+				WHITE
+			)
+		)
 	end
 
 	-- Светящаяся полоса в цвет команды за линией ворот.
-	local glow = newPart(goal, "GoalGlow", Vector3.new(1, 0.1, F.GoalWidth - 2), at(side * (HL + 1.6), 0.05, 0), team.Color, Enum.Material.Neon)
+	local glow =
+		newPart(goal, "GoalGlow", Vector3.new(1, 0.1, F.GoalWidth - 2), at(side * (HL + 1.6), 0.05, 0), team.Color, Enum.Material.Neon)
 	decor(glow)
 end
 
@@ -305,12 +322,20 @@ local function buildWalls(root: Instance)
 		for _, team in ipairs({ HOME, AWAY }) do
 			board(Vector3.new(ARENA_X, boardH, boardT), at(team.Side * ARENA_X / 2, boardH / 2, z), team.Color)
 		end
-		invisible(newPart(walls, "Wall", Vector3.new(ARENA_X * 2 + wallT * 2, wallH, wallT), at(0, wallH / 2, zs * (ARENA_Z + wallT / 2)), WHITE))
+		invisible(
+			newPart(walls, "Wall", Vector3.new(ARENA_X * 2 + wallT * 2, wallH, wallT), at(0, wallH / 2, zs * (ARENA_Z + wallT / 2)), WHITE)
+		)
 
 		-- Рекламные панели с названием игры.
 		local face = zs == 1 and Enum.NormalId.Front or Enum.NormalId.Back
 		for i = -2, 2 do
-			local panel = newPart(walls, "AdPanel", Vector3.new(44, 3.4, 0.2), at(i * 54, boardH / 2, zs * (ARENA_Z - 0.12)), Color3.fromRGB(14, 15, 20))
+			local panel = newPart(
+				walls,
+				"AdPanel",
+				Vector3.new(44, 3.4, 0.2),
+				at(i * 54, boardH / 2, zs * (ARENA_Z - 0.12)),
+				Color3.fromRGB(14, 15, 20)
+			)
 			decor(panel)
 			local color = i < 0 and HOME.Color or (i > 0 and AWAY.Color or WHITE)
 			addBoardText(panel, face, Config.GameTitle, color)
@@ -321,7 +346,9 @@ local function buildWalls(root: Instance)
 	for _, team in ipairs({ HOME, AWAY }) do
 		local s = team.Side
 		board(Vector3.new(boardT, boardH, ARENA_Z * 2 + boardT * 2), at(s * (ARENA_X + boardT / 2), boardH / 2, 0), team.Color)
-		invisible(newPart(walls, "Wall", Vector3.new(wallT, wallH, ARENA_Z * 2 + wallT * 2), at(s * (ARENA_X + wallT / 2), wallH / 2, 0), WHITE))
+		invisible(
+			newPart(walls, "Wall", Vector3.new(wallT, wallH, ARENA_Z * 2 + wallT * 2), at(s * (ARENA_X + wallT / 2), wallH / 2, 0), WHITE)
+		)
 	end
 
 	-- Скошенные углы, чтобы мяч не застревал.
@@ -332,7 +359,16 @@ local function buildWalls(root: Instance)
 			local cf = at(xs * (ARENA_X - cut / 2), 0, zs * (ARENA_Z - cut / 2)) * CFrame.Angles(0, math.rad(xs * zs * 45), 0)
 			local color = teamOfSide(xs).Color
 			newPart(walls, "CornerBoard", Vector3.new(length, boardH, boardT), cf * CFrame.new(0, boardH / 2, 0), DARK, Enum.Material.Metal)
-			decor(newPart(walls, "BoardLed", Vector3.new(length, 0.35, boardT + 0.02), cf * CFrame.new(0, boardH + 0.17, 0), color, Enum.Material.Neon))
+			decor(
+				newPart(
+					walls,
+					"BoardLed",
+					Vector3.new(length, 0.35, boardT + 0.02),
+					cf * CFrame.new(0, boardH + 0.17, 0),
+					color,
+					Enum.Material.Neon
+				)
+			)
 			invisible(newPart(walls, "CornerWall", Vector3.new(length, wallH, 4), cf * CFrame.new(0, wallH / 2, 0), WHITE))
 		end
 	end
@@ -397,7 +433,16 @@ local function buildStands(root: Instance)
 		local roofCf = at(0, roofY, roofZ) * CFrame.Angles(math.rad(zs * 10), 0, 0)
 		local roof = newPart(stands, "Roof", Vector3.new(sideLength + 30, 1.5, 44), roofCf, DARK, Enum.Material.Metal)
 		roof.CanCollide = false
-		decor(newPart(stands, "RoofLed", Vector3.new(sideLength + 30, 0.6, 0.8), roofCf * CFrame.new(0, -0.8, -zs * 21.5), WHITE, Enum.Material.Neon))
+		decor(
+			newPart(
+				stands,
+				"RoofLed",
+				Vector3.new(sideLength + 30, 0.6, 0.8),
+				roofCf * CFrame.new(0, -0.8, -zs * 21.5),
+				WHITE,
+				Enum.Material.Neon
+			)
+		)
 	end
 
 	-- Торцевые трибуны (за воротами).
@@ -410,7 +455,9 @@ local function buildStands(root: Instance)
 			local x = s * (ARENA_X + 8 + rowDepth * (row + 0.5))
 			local shade = row % 2 == 0 and CONCRETE or Color3.fromRGB(44, 46, 56)
 			newPart(stands, "Tier", Vector3.new(rowDepth, top, endLength), at(x, top / 2, 0), shade, Enum.Material.Concrete)
-			decor(newPart(stands, "Seats", Vector3.new(rowDepth - 1.6, 0.5, endLength - 2), at(x, top + 0.25, 0), team.Color:Lerp(DARK, 0.55)))
+			decor(
+				newPart(stands, "Seats", Vector3.new(rowDepth - 1.6, 0.5, endLength - 2), at(x, top + 0.25, 0), team.Color:Lerp(DARK, 0.55))
+			)
 			for z = -ARENA_Z + 3, ARENA_Z - 3, 5 do
 				if rng:NextNumber() < 0.55 then
 					fan(x, top + 0.5, z + rng:NextNumber() * 2, team)
@@ -469,7 +516,8 @@ local function buildLights(root: Instance)
 	for _, xs in ipairs({ -1, 1 }) do
 		for _, zs in ipairs({ -1, 1 }) do
 			local height = 96
-			local pole = newPart(lights, "Tower", Vector3.new(4, height, 4), at(xs * towerX, height / 2, zs * towerZ), DARK, Enum.Material.Metal)
+			local pole =
+				newPart(lights, "Tower", Vector3.new(4, height, 4), at(xs * towerX, height / 2, zs * towerZ), DARK, Enum.Material.Metal)
 			pole.CanCollide = false
 			local headPosition = O + Vector3.new(xs * towerX, height + 4, zs * towerZ)
 			local panelCf = CFrame.lookAt(headPosition, O)
