@@ -1,13 +1,19 @@
 <roblox version="4">
-  <Item class="ReplicatedStorage" referent="0">
+  <Item class="Lighting" referent="0">
+    <Properties>
+      <string name="Name">Lighting</string>
+      <token name="Technology">4</token>
+    </Properties>
+  </Item>
+  <Item class="ReplicatedStorage" referent="1">
     <Properties>
       <string name="Name">ReplicatedStorage</string>
     </Properties>
-    <Item class="Folder" referent="1">
+    <Item class="Folder" referent="2">
       <Properties>
         <string name="Name">Shared</string>
       </Properties>
-      <Item class="ModuleScript" referent="2">
+      <Item class="ModuleScript" referent="3">
         <Properties>
           <string name="Name">AnimSampler</string>
           <string name="Source"><![CDATA[-- Считает позу анимации в заданный момент времени. Чистая математика — без доступа к персонажу.
@@ -95,7 +101,7 @@ return AnimSampler
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="3">
+      <Item class="ModuleScript" referent="4">
         <Properties>
           <string name="Name">Animations</string>
           <string name="Source"><![CDATA[-- Все анимации игры заданы кодом: ключевые позы суставов в градусах.
@@ -995,7 +1001,7 @@ return Animations
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="4">
+      <Item class="ModuleScript" referent="5">
         <Properties>
           <string name="Name">Config</string>
           <string name="Source"><![CDATA[-- Все настройки баланса в одном месте.
@@ -1003,12 +1009,10 @@ return Animations
 
 local Config = {}
 
-Config.GameTitle = "RESONANCE"
-
 -- Side: -1 = ворота на стороне -X, 1 = ворота на стороне +X.
 Config.Teams = {
-	Home = { Name = "СОЛАР", Color = Color3.fromRGB(255, 124, 48), Side = -1 },
-	Away = { Name = "НОКС", Color = Color3.fromRGB(88, 122, 255), Side = 1 },
+	Home = { Name = "HOME", Color = Color3.fromRGB(52, 120, 255), Side = -1 },
+	Away = { Name = "AWAY", Color = Color3.fromRGB(240, 62, 72), Side = 1 },
 }
 
 -- Тип аватара. Анимации есть для обоих, основной — R6.
@@ -1025,8 +1029,8 @@ Config.Match = {
 }
 
 Config.Player = {
-	WalkSpeed = 20,
-	SprintSpeed = 29,
+	WalkSpeed = 22,
+	SprintSpeed = 32,
 	DribbleMult = 0.94, -- скорость с мячом
 	MaxStamina = 100,
 	SprintDrain = 13, -- расход выносливости в секунду
@@ -1051,8 +1055,8 @@ Config.Ball = {
 }
 
 Config.Shot = {
-	MinPower = 64,
-	MaxPower = 140,
+	MinPower = 70,
+	MaxPower = 155,
 	ChargeTime = 0.85,
 	ChargeMoveMult = 0.55,
 	BaseElevation = 15, -- градусы, добавляются к наклону камеры
@@ -1062,9 +1066,9 @@ Config.Shot = {
 
 Config.Pass = {
 	MinSpeed = 62,
-	MaxSpeed = 120,
+	MaxSpeed = 140,
 	AssistAngle = 32, -- конус автонаведения на партнёра
-	MaxRange = 160,
+	MaxRange = 230,
 	Elevation = 3,
 }
 
@@ -1072,7 +1076,7 @@ Config.Lob = {
 	Elevation = 40,
 	DefaultSpeed = 84,
 	MinSpeed = 48,
-	MaxSpeed = 122,
+	MaxSpeed = 140,
 }
 
 Config.Tackle = {
@@ -1117,11 +1121,19 @@ Config.Bots = {
 	KeeperSpeed = 23,
 	KeeperReach = 4.8, -- радиус, в котором вратарь ловит мяч
 	KeeperDiveReach = 6.4,
-	KeeperCatchSpeed = 160, -- быстрее — только отбивает
+	KeeperCatchSpeed = 128, -- быстрее — только отбивает (сильный заряженный удар вратарь не ловит)
 	KeeperDiveSpeed = 40,
 	KeeperDiveCooldown = 1.5,
 	KeeperReaction = 0.2,
 	KeeperHoldTime = 1.1,
+}
+
+-- Анимации из Roblox (например, сделанные в Blender или Moon Animator и опубликованные в Roblox).
+-- Впиши ID — и игра будет проигрывать её вместо встроенной анимации из кода. Пусто — встроенная.
+-- Имена: ChargeHold, Shoot, PowerShot, Pass, Lob, Slide, Dribble, Dash, Ram, Stun, Cast,
+--        PowerStance, Celebrate, DiveLeft, DiveRight.
+Config.AnimationIds = {
+	-- Shoot = "rbxassetid://1234567890",
 }
 
 -- Клавиши. Имена — из Enum.KeyCode / Enum.UserInputType.
@@ -1162,38 +1174,39 @@ return Config
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="5">
+      <Item class="ModuleScript" referent="6">
         <Properties>
           <string name="Name">FieldSpec</string>
           <string name="Source"><![CDATA[-- Размеры поля. Используется и сервером (постройка, голы), и клиентом (прицел, боты).
--- Поле лежит вдоль оси X: ворота СОЛАР на -X, ворота НОКС на +X. Верх газона = Origin.Y.
+-- Поле лежит вдоль оси X: ворота HOME на -X, ворота AWAY на +X. Верх газона = Origin.Y.
 
 local FieldSpec = {}
 
 FieldSpec.Origin = Vector3.new(0, 0, 0)
 
-FieldSpec.Length = 260
-FieldSpec.Width = 150
+FieldSpec.Length = 380
+FieldSpec.Width = 240
 FieldSpec.HalfLength = FieldSpec.Length / 2
 FieldSpec.HalfWidth = FieldSpec.Width / 2
 
 -- Зона за линиями до бортов: мяч не уходит в аут, а отскакивает от борта.
-FieldSpec.EndMargin = 14
-FieldSpec.SideMargin = 9
-FieldSpec.WallHeight = 50
+FieldSpec.EndMargin = 18
+FieldSpec.SideMargin = 12
+FieldSpec.WallHeight = 80
 
-FieldSpec.GoalWidth = 32
-FieldSpec.GoalHeight = 12.5
-FieldSpec.GoalDepth = 9
-FieldSpec.PostRadius = 0.55
+FieldSpec.GoalWidth = 40
+FieldSpec.GoalHeight = 14
+FieldSpec.GoalDepth = 10
+FieldSpec.PostRadius = 0.6
 
-FieldSpec.PenaltyDepth = 46
-FieldSpec.PenaltyWidth = 92
-FieldSpec.GoalAreaDepth = 17
-FieldSpec.GoalAreaWidth = 54
-FieldSpec.PenaltySpot = 32
-FieldSpec.CenterRadius = 26
-FieldSpec.LineWidth = 0.8
+FieldSpec.PenaltyDepth = 66
+FieldSpec.PenaltyWidth = 140
+FieldSpec.GoalAreaDepth = 24
+FieldSpec.GoalAreaWidth = 72
+FieldSpec.PenaltySpot = 44
+FieldSpec.PenaltyArc = 30
+FieldSpec.CenterRadius = 36
+FieldSpec.LineWidth = 1
 
 -- Центр линии ворот на уровне газона. side: -1 или 1.
 function FieldSpec.goalCenter(side: number): Vector3
@@ -1242,7 +1255,7 @@ return FieldSpec
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="6">
+      <Item class="ModuleScript" referent="7">
         <Properties>
           <string name="Name">Mover</string>
           <string name="Source"><![CDATA[-- Резкие перемещения персонажа: рывок и телепорт на короткую дистанцию.
@@ -1296,7 +1309,7 @@ return Mover
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="7">
+      <Item class="ModuleScript" referent="8">
         <Properties>
           <string name="Name">Signal</string>
           <string name="Source"><![CDATA[-- Простейший сигнал: Connect / Fire. Нужен, чтобы серверные модули не зависели друг от друга напрямую.
@@ -1331,7 +1344,7 @@ return Signal
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="8">
+      <Item class="ModuleScript" referent="9">
         <Properties>
           <string name="Name">Styles</string>
           <string name="Source"><![CDATA[-- Реестр стилей. Каждый модуль в этой папке — один стиль (один OC).
@@ -1360,7 +1373,10 @@ table.sort(Styles.list, function(a, b)
 	return (a.order or 99) < (b.order or 99)
 end)
 
-Styles.default = Styles.list[1].id
+-- Если выбираемых стилей нет, все играют базовым стилем без способностей,
+-- а меню стилей, способности и Резонанс в интерфейсе скрыты.
+Styles.enabled = #Styles.list > 0
+Styles.default = Styles.enabled and Styles.list[1].id or "Base"
 
 function Styles.get(id: string?)
 	return Styles.byId[id or Styles.default] or Styles.byId[Styles.default]
@@ -1369,602 +1385,25 @@ end
 return Styles
 ]]></string>
         </Properties>
-        <Item class="ModuleScript" referent="9">
-          <Properties>
-            <string name="Name">Bastion</string>
-            <string name="Source"><![CDATA[-- БАСТИОН — защитник. Таран с отбором мяча, энергобарьер, ульта «Цитадель».
-
-local Workspace = game:GetService("Workspace")
-
-local COLOR = Color3.fromRGB(64, 232, 150)
-local COLOR2 = Color3.fromRGB(210, 255, 232)
-
-return {
-	id = "Bastion",
-	order = 4,
-	name = "Бастион",
-	role = "Защитник",
-	tagline = "Дальше ты не пройдёшь.",
-	description = "Отбирает мяч дальше всех, ставит барьеры и принимает даже те удары, которые принять нельзя.",
-	color = COLOR,
-	color2 = COLOR2,
-	stats = { speed = 0.97, shot = 1.0, stamina = 1.15, tackle = 1.25, trap = 1.3 },
-
-	abilities = {
-		{
-			id = "Ram",
-			name = "Таран",
-			desc = "Длинный рывок плечом. Если задел соперника с мячом — мяч сразу твой, а он оглушён.",
-			cooldown = 9,
-			needsNoBall = true,
-
-			predict = function(me, input)
-				local dir = input.move.Magnitude > 0.1 and input.move or input.aim
-				me.dash(dir, 72, 0.4)
-				me.anim("Ram")
-			end,
-
-			server = function(ctx)
-				local dir = ctx.move.Magnitude > 0.1 and ctx.move or ctx.aim
-				ctx.slide({ duration = 0.46, radius = 6.2, take = true, stun = 1, dir = dir })
-				ctx.fx("ram")
-			end,
-
-			client = function(fx, data)
-				local character = data.character
-				if not fx.isLocal(character) then
-					fx.anim(character, "Ram")
-				end
-				fx.charTrail(character, COLOR, 0.6)
-				local root = fx.rootOf(character)
-				if root then
-					fx.disc(fx.ground(root.Position), COLOR, { from = 2, to = 14, time = 0.3 })
-					fx.sound("Dash", root)
-				end
-			end,
-		},
-
-		{
-			id = "Barrier",
-			name = "Барьер",
-			desc = "Ставит перед собой энергостену на 3.5 секунды. Игроки проходят сквозь неё, мяч — нет.",
-			cooldown = 13,
-
-			predict = function(me)
-				me.anim("Cast")
-			end,
-
-			server = function(ctx)
-				local F = ctx.Field
-				local width, height, thickness, duration = 22, 11, 2.5, 3.5
-				local flat = F.clampToArena(ctx.root.Position + ctx.aim * 9, 3)
-				local center = Vector3.new(flat.X, F.Origin.Y + height / 2, flat.Z)
-				local cframe = CFrame.lookAt(center, center + ctx.aim)
-
-				local wall = Instance.new("Part")
-				wall.Name = "Barrier"
-				wall.Anchored = true
-				wall.Size = Vector3.new(width, height, thickness)
-				wall.CFrame = cframe
-				wall.Material = Enum.Material.ForceField
-				wall.Color = COLOR
-				wall.CollisionGroup = "BallOnly"
-				wall.CanQuery = false
-				wall.CastShadow = false
-
-				-- Светящаяся рамка, чтобы стену было хорошо видно.
-				local edges = {
-					{ Vector3.new(width, 0.4, 0.4), CFrame.new(0, height / 2, 0) },
-					{ Vector3.new(width, 0.4, 0.4), CFrame.new(0, -height / 2 + 0.2, 0) },
-					{ Vector3.new(0.4, height, 0.4), CFrame.new(width / 2, 0, 0) },
-					{ Vector3.new(0.4, height, 0.4), CFrame.new(-width / 2, 0, 0) },
-				}
-				for _, edge in ipairs(edges) do
-					local bar = Instance.new("Part")
-					bar.Name = "Edge"
-					bar.Anchored = true
-					bar.CanCollide = false
-					bar.CanQuery = false
-					bar.CanTouch = false
-					bar.CastShadow = false
-					bar.Material = Enum.Material.Neon
-					bar.Color = COLOR
-					bar.Size = edge[1]
-					bar.CFrame = cframe * edge[2]
-					bar.Parent = wall
-				end
-
-				wall.Parent = Workspace
-				task.delay(duration, function()
-					wall:Destroy()
-				end)
-				ctx.fx("barrier", { position = center })
-			end,
-
-			client = function(fx, data)
-				if not fx.isLocal(data.character) then
-					fx.anim(data.character, "Cast")
-				end
-				fx.sphere(data.position, COLOR, { from = 3, to = 20, time = 0.35 })
-				fx.burst(data.position, COLOR2, { count = 30, speed = 26, life = 0.5 })
-				fx.sound("Ability", data.position)
-			end,
-		},
-
-		{
-			id = "Citadel",
-			name = "Цитадель",
-			desc = "УЛЬТА. 9 секунд ты принимаешь любой мяч в большом радиусе, и тебя нельзя ни оглушить, ни обокрасть.",
-			cooldown = 6,
-			ultimate = true,
-
-			predict = function(me)
-				me.anim("PowerStance")
-			end,
-
-			server = function(ctx)
-				local actor, Actors = ctx.actor, ctx.Actors
-				local duration, radius = 9, 9.5
-				Actors.setFlag(actor, "autoTrapUntil", duration)
-				Actors.setFlag(actor, "unstoppableUntil", duration)
-				Actors.setFlag(actor, "reachUntil", duration)
-				actor.flags.reach = radius
-				Actors.addSpeedMod(actor, "Citadel", 1.1, duration)
-				ctx.fx("start", { duration = duration, radius = radius })
-			end,
-
-			client = function(fx, data)
-				local character = data.character
-				if not fx.isLocal(character) then
-					fx.anim(character, "PowerStance")
-				end
-				local root = fx.rootOf(character)
-				if root then
-					fx.sphere(root.Position, COLOR, { from = 2, to = 30, time = 0.5 })
-					fx.disc(fx.ground(root.Position), COLOR2, { from = 3, to = 34, time = 0.6 })
-					fx.sound("Ultimate", root)
-				end
-				fx.aura(character, COLOR, { radius = data.radius, time = data.duration })
-			end,
-		},
-	},
-}
-]]></string>
-          </Properties>
-        </Item>
         <Item class="ModuleScript" referent="10">
           <Properties>
-            <string name="Name">Comet</string>
-            <string name="Source"><![CDATA[-- КОМЕТА — нападающий. Самый сильный удар, рывок к воротам, ульта «Метеор».
-
-local COLOR = Color3.fromRGB(255, 138, 40)
-local COLOR2 = Color3.fromRGB(255, 228, 132)
-local UP = Vector3.new(0, 1, 0)
-
--- Куда падает «Метеор»: в ворота, если игрок смотрит в их сторону, иначе — в точку впереди.
-local function meteorTarget(ctx): Vector3
-	local F = ctx.Field
-	local goal = ctx.enemyGoal
-	local toGoal = ctx.Util.flat(goal - ctx.root.Position)
-	if toGoal.Magnitude < 170 and ctx.Util.angleBetween(ctx.aim, toGoal) < 60 then
-		local lateral = (math.random() * 2 - 1) * F.GoalWidth * 0.32
-		local behind = ctx.Util.flatUnit(toGoal) * 3
-		return goal + behind + Vector3.new(0, 4, lateral)
-	end
-	local point = F.clampToArena(ctx.root.Position + ctx.aim * 90, 6)
-	return Vector3.new(point.X, F.Origin.Y + 1.5, point.Z)
-end
+            <string name="Name">Base</string>
+            <string name="Source"><![CDATA[-- Базовый стиль: без способностей. Его получают все игроки, пока в игре нет ни одного выбираемого стиля.
 
 return {
-	id = "Comet",
-	order = 1,
-	name = "Комета",
-	role = "Нападающий",
-	tagline = "Один удар — один гол.",
-	description = "Самый мощный удар в игре. Врывается в штрафную и бьёт так, что мяч нельзя принять.",
-	color = COLOR,
-	color2 = COLOR2,
-	stats = { speed = 1.0, shot = 1.12, stamina = 1.0, tackle = 0.9, trap = 1.0 },
-
-	abilities = {
-		{
-			id = "CometShot",
-			name = "Хвост кометы",
-			desc = "Сверхбыстрый прямой удар. Соперник не может принять мяч — только отбить.",
-			cooldown = 11,
-			needsBall = true,
-
-			predict = function(me)
-				me.anim("PowerShot")
-			end,
-
-			server = function(ctx)
-				local actor = ctx.actor
-				ctx.Actors.addSpeedMod(actor, "Windup", 0.35, 0.24)
-				ctx.fx("windup")
-				ctx.after(0.22, function()
-					if not actor.hasBall then
-						return
-					end
-					local elevation = math.clamp(ctx.Util.elevationOf(ctx.aimLook), 3, 20)
-					local dir = ctx.Util.withElevation(ctx.aim, elevation)
-					local power = 205 * (actor.style.stats.shot or 1)
-					ctx.Ball.kick(actor, dir * power, {
-						kind = "Shot",
-						untrappable = 0.75,
-						gravityScale = 0.22,
-						color = COLOR,
-						colorTime = 1.8,
-					})
-					ctx.fx("fire", { position = ctx.Ball.position() })
-				end)
-			end,
-
-			client = function(fx, data)
-				if data.stage == "windup" then
-					if not fx.isLocal(data.character) then
-						fx.anim(data.character, "PowerShot")
-					end
-					local root = fx.rootOf(data.character)
-					if root then
-						fx.burst(root.Position - Vector3.new(0, 2.5, 0), COLOR, { count = 16, speed = 12, life = 0.35 })
-						fx.sound("Ability", root)
-					end
-				elseif data.stage == "fire" then
-					local position = data.position
-					fx.sphere(position, COLOR, { from = 2, to = 17, time = 0.35 })
-					fx.disc(position - Vector3.new(0, 1, 0), COLOR2, { from = 3, to = 24, time = 0.4 })
-					fx.burst(position, COLOR2, { count = 40, speed = 40, life = 0.5 })
-					fx.light(position, COLOR, { range = 32, time = 0.4 })
-					fx.shake(position, 0.9, 0.3)
-					fx.sound("PowerKick", position)
-				end
-			end,
-		},
-
-		{
-			id = "Afterburner",
-			name = "Форсаж",
-			desc = "Рывок вперёд на огромной скорости. Мяч остаётся в ногах, подкаты не проходят.",
-			cooldown = 9,
-
-			predict = function(me, input)
-				local dir = input.move.Magnitude > 0.1 and input.move or input.aim
-				me.dash(dir, 78, 0.36)
-				me.anim("Dash")
-			end,
-
-			server = function(ctx)
-				ctx.Actors.setImmune(ctx.actor, 0.45)
-				ctx.Actors.addSpeedMod(ctx.actor, "Afterburner", 1.22, 2.6)
-				ctx.fx("go")
-			end,
-
-			client = function(fx, data)
-				local character = data.character
-				if not fx.isLocal(character) then
-					fx.anim(character, "Dash")
-				end
-				fx.charTrail(character, COLOR, 0.8)
-				local root = fx.rootOf(character)
-				if root then
-					fx.disc(root.Position - Vector3.new(0, 2.8, 0), COLOR, { from = 2, to = 15, time = 0.3 })
-					fx.sound("Dash", root)
-				end
-				for i = 0, 2 do
-					task.delay(i * 0.09, function()
-						fx.afterimage(character, COLOR, { time = 0.35 })
-					end)
-				end
-			end,
-		},
-
-		{
-			id = "Meteor",
-			name = "Метеор",
-			desc = "УЛЬТА. Мяч взмывает в небо и падает на ворота огненным метеором.",
-			cooldown = 6,
-			ultimate = true,
-			needsBall = true,
-
-			predict = function(me)
-				me.anim("PowerShot")
-			end,
-
-			server = function(ctx)
-				local actor, Ball = ctx.actor, ctx.Ball
-				ctx.Actors.setImmune(actor, 0.5)
-				ctx.Actors.addSpeedMod(actor, "Windup", 0.3, 0.24)
-				ctx.fx("windup")
-				ctx.after(0.22, function()
-					if not actor.hasBall then
-						return
-					end
-					-- Фаза 1: мяч уходит вверх. В это время его никто не может тронуть.
-					local launch = (ctx.aim * 0.35 + UP).Unit
-					Ball.kick(actor, launch * 100, {
-						kind = "Shot",
-						untrappable = 2.4,
-						gravityScale = 0.6,
-						gravityTime = 2,
-						noPickup = 1.6,
-						color = COLOR,
-						colorTime = 3,
-					})
-					Ball.lock(0.66)
-					ctx.fx("launch", { position = Ball.position() })
-
-					ctx.after(0.6, function()
-						local shot = Ball.shot
-						if Ball.holder or not shot or shot.kicker ~= actor then
-							return
-						end
-						-- Фаза 2: падение по прямой в цель.
-						local from = Ball.position()
-						local target = meteorTarget(ctx)
-						local dir = ctx.Util.unit(target - from, -UP)
-						Ball.kick(actor, dir * 265, {
-							kind = "Shot",
-							untrappable = 1.2,
-							gravityScale = 0,
-							gravityTime = 1,
-							noPickup = 0.8,
-							color = COLOR2,
-							colorTime = 2,
-						})
-						ctx.fx("fall", { position = from, target = target })
-					end)
-				end)
-			end,
-
-			client = function(fx, data)
-				if data.stage == "windup" then
-					if not fx.isLocal(data.character) then
-						fx.anim(data.character, "PowerShot")
-					end
-					local root = fx.rootOf(data.character)
-					if root then
-						fx.sphere(root.Position, COLOR, { from = 14, to = 3, time = 0.22 })
-						fx.sound("Ultimate", root)
-					end
-				elseif data.stage == "launch" then
-					fx.pillar(data.position, COLOR, { radius = 3, height = 60, time = 0.6 })
-					fx.disc(data.position - Vector3.new(0, 1, 0), COLOR2, { from = 4, to = 30, time = 0.5 })
-					fx.burst(data.position, COLOR2, { count = 50, speed = 45, life = 0.6 })
-					fx.shake(data.position, 1.2, 0.4)
-					fx.sound("PowerKick", data.position)
-				elseif data.stage == "fall" then
-					local from, target = data.position, data.target
-					fx.sphere(from, COLOR2, { from = 3, to = 26, time = 0.4 })
-					fx.light(from, COLOR, { range = 50, time = 0.5 })
-					fx.sound("Ultimate", from)
-					local travel = (target - from).Magnitude / 265
-					task.delay(travel, function()
-						fx.sphere(target, COLOR, { from = 4, to = 34, time = 0.5 })
-						fx.disc(fx.ground(target), COLOR2, { from = 4, to = 46, time = 0.6 })
-						fx.burst(target, COLOR, { count = 70, speed = 60, life = 0.7 })
-						fx.light(target, COLOR, { range = 60, time = 0.6 })
-						fx.shake(target, 1.8, 0.5)
-						fx.sound("Block", target)
-					end)
-				end
-			end,
-		},
-	},
+	id = "Base",
+	selectable = false,
+	name = "Игрок",
+	role = "",
+	color = Color3.fromRGB(255, 255, 255),
+	color2 = Color3.fromRGB(220, 224, 232),
+	stats = {},
+	abilities = {},
 }
 ]]></string>
           </Properties>
         </Item>
         <Item class="ModuleScript" referent="11">
-          <Properties>
-            <string name="Name">Graviton</string>
-            <string name="Source"><![CDATA[-- ГРАВИТОН — контроль поля. Притягивает мяч, бьёт самонаводящимся ударом, ульта «Сингулярность».
-
-local COLOR = Color3.fromRGB(72, 212, 255)
-local COLOR2 = Color3.fromRGB(40, 70, 190)
-
--- Цель удара «Орбита»: точка в воротах, куда смотрит игрок, либо точка впереди.
-local function orbitTarget(ctx): Vector3
-	local F = ctx.Field
-	local goal = ctx.enemyGoal
-	local origin = ctx.root.Position
-	local toGoal = ctx.Util.flat(goal - origin)
-	local aim = ctx.aim
-	if toGoal.Magnitude < 130 and ctx.Util.angleBetween(aim, toGoal) < 70 and math.abs(aim.X) > 0.05 then
-		local travel = (goal.X - origin.X) / aim.X
-		local z = origin.Z + aim.Z * travel
-		local limit = F.GoalWidth / 2 - 3.5
-		z = math.clamp(z, goal.Z - limit, goal.Z + limit)
-		return Vector3.new(goal.X, F.Origin.Y + 4.5, z) + ctx.Util.flatUnit(toGoal) * 3
-	end
-	local point = F.clampToArena(origin + aim * 90, 6)
-	return Vector3.new(point.X, F.Origin.Y + 3, point.Z)
-end
-
-return {
-	id = "Graviton",
-	order = 3,
-	name = "Гравитон",
-	role = "Плеймейкер",
-	tagline = "Мяч сам знает, к кому лететь.",
-	description = "Управляет мячом на расстоянии: притягивает его к себе и доводит удар до цели.",
-	color = COLOR,
-	color2 = COLOR2,
-	stats = { speed = 1.0, shot = 1.0, stamina = 1.1, tackle = 1.0, trap = 1.25 },
-
-	abilities = {
-		{
-			id = "Pull",
-			name = "Притяжение",
-			desc = "Свободный мяч в радиусе 70 летит к тебе. Вблизи вырывает мяч у соперника.",
-			cooldown = 10,
-			needsNoBall = true,
-
-			predict = function(me)
-				me.anim("Cast")
-			end,
-
-			server = function(ctx)
-				local actor, Ball = ctx.actor, ctx.Ball
-				local ballPos = Ball.position()
-				local distance = (ballPos - ctx.root.Position).Magnitude
-				local holder = Ball.holder
-
-				if holder then
-					if holder.team == actor.team or distance > 18 or ctx.Actors.isImmune(holder) then
-						return false -- не сработало: перезарядка не тратится
-					end
-					local dir = ctx.Util.flatUnit(ctx.root.Position - ballPos)
-					Ball.knockLoose(dir * 26 + Vector3.new(0, 16, 0), actor)
-					holder.noPickupUntil = ctx.now + 0.9
-				elseif distance > 70 then
-					return false
-				end
-
-				local duration = 1
-				Ball.addForce(duration, function(dt, part)
-					if not actor.alive then
-						return
-					end
-					local chest = actor.root.Position - Vector3.new(0, actor.groundOffset - 1.5, 0)
-					local to = chest - part.Position
-					local desired = ctx.Util.unit(to) * math.clamp(to.Magnitude * 3, 30, 95)
-					part.AssemblyLinearVelocity = part.AssemblyLinearVelocity:Lerp(desired, math.min(1, dt * 7))
-				end)
-				Ball.setFx(COLOR, duration + 0.3)
-				ctx.fx("pull", { duration = duration })
-				return true
-			end,
-
-			client = function(fx, data)
-				local character = data.character
-				if not fx.isLocal(character) then
-					fx.anim(character, "Cast")
-				end
-				local root = fx.rootOf(character)
-				local ball = fx.ball()
-				if root and ball then
-					fx.beam(root, ball, COLOR, { width = 1.1, time = data.duration })
-					fx.sphere(ball.Position, COLOR, { from = 14, to = 2, time = 0.35 })
-					fx.sound("Ability", root)
-				end
-			end,
-		},
-
-		{
-			id = "Orbit",
-			name = "Орбита",
-			desc = "Удар, который сам доворачивает к цели: в угол ворот или в точку, куда ты смотришь.",
-			cooldown = 11,
-			needsBall = true,
-
-			predict = function(me)
-				me.anim("Shoot")
-			end,
-
-			server = function(ctx)
-				local actor, Ball, Util = ctx.actor, ctx.Ball, ctx.Util
-				local target = orbitTarget(ctx)
-				local speed = 132 * (actor.style.stats.shot or 1)
-				local duration = 1.15
-				Ball.kick(actor, Util.withElevation(ctx.aim, 12) * speed, {
-					kind = "Shot",
-					untrappable = 0.3,
-					gravityScale = 0.3,
-					color = COLOR,
-					colorTime = 1.7,
-				})
-				Ball.addForce(duration, function(dt, part)
-					local velocity = part.AssemblyLinearVelocity
-					local current = velocity.Magnitude
-					if current < 20 then
-						return
-					end
-					local want = Util.unit(target - part.Position)
-					local dir = Util.unit(velocity.Unit:Lerp(want, math.min(1, dt * 3.2)))
-					part.AssemblyLinearVelocity = dir * current
-				end)
-				ctx.fx("shot", { position = Ball.position(), duration = duration })
-			end,
-
-			client = function(fx, data)
-				if not fx.isLocal(data.character) then
-					fx.anim(data.character, "Shoot")
-				end
-				fx.sphere(data.position, COLOR, { from = 2, to = 13, time = 0.3 })
-				fx.sound("Kick", data.position)
-				local ball = fx.ball()
-				if ball then
-					fx.orbit(ball, COLOR, { count = 3, radius = 3.2, time = data.duration })
-				end
-			end,
-		},
-
-		{
-			id = "Singularity",
-			name = "Сингулярность",
-			desc = "УЛЬТА. Гравитационная воронка: соперники в ней вдвое медленнее, а мяч летит к тебе.",
-			cooldown = 6,
-			ultimate = true,
-
-			predict = function(me)
-				me.anim("PowerStance")
-			end,
-
-			server = function(ctx)
-				local actor, Ball, Actors, F = ctx.actor, ctx.Ball, ctx.Actors, ctx.Field
-				local radius, duration = 34, 4.5
-				local flat = F.clampToArena(ctx.root.Position + ctx.aim * 16, 6)
-				local center = Vector3.new(flat.X, F.Origin.Y + 5, flat.Z)
-
-				-- Соперник с мячом рядом с центром сразу теряет мяч.
-				local holder = Ball.holder
-				if holder and holder.team ~= actor.team and not Actors.isImmune(holder) then
-					if ctx.Util.flat(holder.root.Position - center).Magnitude < 16 then
-						Ball.knockLoose(Vector3.new(0, 22, 0), actor)
-						holder.noPickupUntil = ctx.now + 1.2
-					end
-				end
-
-				ctx.fx("open", { position = center, radius = radius, duration = duration })
-				ctx.loop(duration, 0.05, function()
-					for _, other in ipairs(Actors.inRadius(center, radius)) do
-						if other.team ~= actor.team then
-							Actors.addSpeedMod(other, "Singularity", 0.5, 0.3)
-						end
-					end
-					if not Ball.holder and Ball.active then
-						local part = Ball.part
-						local ballPos = part.Position
-						if ctx.Util.flat(ballPos - center).Magnitude < radius then
-							local to = actor.root.Position - ballPos
-							local desired = ctx.Util.unit(to) * math.clamp(to.Magnitude * 2.5, 20, 70)
-							part.AssemblyLinearVelocity = part.AssemblyLinearVelocity:Lerp(desired, 0.2)
-						end
-					end
-				end)
-			end,
-
-			client = function(fx, data)
-				local character = data.character
-				if not fx.isLocal(character) then
-					fx.anim(character, "PowerStance")
-				end
-				local position, radius, duration = data.position, data.radius, data.duration
-				fx.sound("Ultimate", position)
-				fx.shake(position, 1.2, 0.5)
-				fx.zone(position, COLOR, { radius = radius, time = duration, core = COLOR2 })
-				fx.every(duration, 0.3, function()
-					fx.sphere(position, COLOR, { from = radius * 1.6, to = 4, time = 0.45, transparency = 0.6 })
-				end)
-			end,
-		},
-	},
-}
-]]></string>
-          </Properties>
-        </Item>
-        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">Keeper</string>
             <string name="Source"><![CDATA[-- Служебный стиль ботов-вратарей. В меню выбора не показывается.
@@ -1982,158 +1421,14 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="13">
-          <Properties>
-            <string name="Name">Mirage</string>
-            <string name="Source"><![CDATA[-- МИРАЖ — дриблёр. Телепорт сквозь защиту, кручёный удар с ложными мячами, ульта «Зал зеркал».
-
-local COLOR = Color3.fromRGB(186, 96, 255)
-local COLOR2 = Color3.fromRGB(255, 150, 236)
-
-return {
-	id = "Mirage",
-	order = 2,
-	name = "Мираж",
-	role = "Дриблёр",
-	tagline = "Ты целишься туда, где меня уже нет.",
-	description = "Проходит сквозь защиту и путает соперника ложными образами. Мяч в ногах почти не замедляет.",
-	color = COLOR,
-	color2 = COLOR2,
-	stats = { speed = 1.04, shot = 0.95, stamina = 1.0, tackle = 0.95, trap = 1.0, dribble = 1.0 },
-
-	abilities = {
-		{
-			id = "PhantomStep",
-			name = "Фантомный шаг",
-			desc = "Мгновенный перенос на 20 шагов по направлению движения. Мяч уходит вместе с тобой.",
-			cooldown = 8,
-
-			predict = function(me, input)
-				local dir = input.move.Magnitude > 0.1 and input.move or input.aim
-				me.blink(dir, 20)
-			end,
-
-			server = function(ctx)
-				ctx.Actors.setImmune(ctx.actor, 0.55)
-				ctx.fx("blink", { from = ctx.root.Position })
-			end,
-
-			client = function(fx, data)
-				local character = data.character
-				local root = fx.rootOf(character)
-				if not root then
-					return
-				end
-				-- Образ остаётся там, откуда игрок исчез.
-				fx.afterimage(character, COLOR, { time = 0.6, offset = data.from - root.Position })
-				fx.sphere(data.from, COLOR, { from = 7, to = 1, time = 0.25 })
-				fx.sphere(root.Position, COLOR2, { from = 1, to = 9, time = 0.3 })
-				fx.burst(root.Position, COLOR2, { count = 24, speed = 22, life = 0.4 })
-				fx.sound("Dash", root)
-			end,
-		},
-
-		{
-			id = "MirrorCurve",
-			name = "Кривое зеркало",
-			desc = "Кручёный удар: мяч уходит в сторону и возвращается по дуге. Вместе с ним летят два ложных мяча.",
-			cooldown = 10,
-			needsBall = true,
-
-			predict = function(me)
-				me.anim("Shoot")
-			end,
-
-			server = function(ctx)
-				local actor, Util = ctx.actor, ctx.Util
-				-- Сторона закрутки: куда игрок смещается (A/D), по умолчанию вправо.
-				local right = Util.rightOf(ctx.aim)
-				local side = 1
-				if ctx.move.Magnitude > 0.1 and math.abs(ctx.move:Dot(right)) > 0.3 then
-					side = ctx.move:Dot(right) > 0 and 1 or -1
-				end
-				local speed = 150 * (actor.style.stats.shot or 1)
-				local start = Util.rotateY(ctx.aim, 20 * side) -- сначала мяч уходит в противоположную сторону
-				local velocity = Util.withElevation(start, 9) * speed
-				local accel = right * (side * 190)
-
-				ctx.Ball.kick(actor, velocity, {
-					kind = "Shot",
-					untrappable = 0.3,
-					gravityScale = 0.4,
-					color = COLOR,
-					colorTime = 1.4,
-				})
-				ctx.Ball.addForce(0.55, function(dt, part)
-					part.AssemblyLinearVelocity += accel * dt
-				end)
-				ctx.fx("shot", { position = ctx.Ball.position(), velocity = velocity, accel = accel })
-			end,
-
-			client = function(fx, data)
-				if not fx.isLocal(data.character) then
-					fx.anim(data.character, "Shoot")
-				end
-				local position, velocity, accel = data.position, data.velocity, data.accel
-				fx.sphere(position, COLOR, { from = 2, to = 12, time = 0.3 })
-				fx.sound("Kick", position)
-				-- Ложные мячи: зеркальная дуга и прямая.
-				local mirrored = Vector3.new(velocity.X, velocity.Y, velocity.Z) - accel.Unit * (2 * velocity:Dot(accel.Unit))
-				fx.ghostBall(position, mirrored, COLOR2, { time = 0.6, accel = -accel })
-				fx.ghostBall(position, (velocity + mirrored) / 2, COLOR2, { time = 0.5 })
-			end,
-		},
-
-		{
-			id = "HallOfMirrors",
-			name = "Зал зеркал",
-			desc = "УЛЬТА. 8 секунд ты быстрее, а подкаты и оглушения на тебя не действуют.",
-			cooldown = 6,
-			ultimate = true,
-
-			predict = function(me)
-				me.anim("PowerStance")
-			end,
-
-			server = function(ctx)
-				local duration = 8
-				ctx.Actors.setFlag(ctx.actor, "unstoppableUntil", duration)
-				ctx.Actors.addSpeedMod(ctx.actor, "Mirrors", 1.2, duration)
-				ctx.fx("start", { duration = duration })
-			end,
-
-			client = function(fx, data)
-				local character = data.character
-				if not fx.isLocal(character) then
-					fx.anim(character, "PowerStance")
-				end
-				local root = fx.rootOf(character)
-				if root then
-					fx.sphere(root.Position, COLOR, { from = 2, to = 26, time = 0.5 })
-					fx.burst(root.Position, COLOR2, { count = 50, speed = 34, life = 0.6 })
-					fx.sound("Ultimate", root)
-				end
-				if fx.isLocal(character) then
-					fx.flash(COLOR, 0.35, 0.5)
-				end
-				fx.charTrail(character, COLOR2, data.duration)
-				fx.every(data.duration, 0.14, function()
-					fx.afterimage(character, COLOR, { time = 0.4, transparency = 0.6 })
-				end)
-			end,
-		},
-	},
-}
-]]></string>
-          </Properties>
-        </Item>
-        <Item class="ModuleScript" referent="14">
+        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">_Template</string>
             <string name="Source"><![CDATA[-- ШАБЛОН СТИЛЯ (твой OC).
 -- 1. Скопируй этот файл, назови без подчёркивания в начале (например Phoenix.luau).
 -- 2. Поменяй id, name, цвета, характеристики и способности.
 -- 3. Стиль сам появится в меню выбора. Модули с "_" в начале имени игра не загружает.
+-- Готовые примеры стилей лежат в папке archive/styles (сейчас отключены).
 --
 -- У каждой способности три функции:
 --   predict(me, input) — выполняется СРАЗУ на клиенте игрока (рывок, анимация). Необязательна.
@@ -2210,7 +1505,7 @@ return {
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="15">
+      <Item class="ModuleScript" referent="13">
         <Properties>
           <string name="Name">Util</string>
           <string name="Source"><![CDATA[-- Мелкая математика, общая для сервера и клиента.
@@ -2319,15 +1614,15 @@ return Util
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="16">
+  <Item class="ServerScriptService" referent="14">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Folder" referent="17">
+    <Item class="Folder" referent="15">
       <Properties>
         <string name="Name">Server</string>
       </Properties>
-      <Item class="ModuleScript" referent="18">
+      <Item class="ModuleScript" referent="16">
         <Properties>
           <string name="Name">ActionService</string>
           <string name="Source"><![CDATA[-- Принимает действия игроков (RemoteEvent "Action"), проверяет их и выполняет:
@@ -2786,7 +2081,7 @@ return Actions
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="19">
+      <Item class="ModuleScript" referent="17">
         <Properties>
           <string name="Name">Actors</string>
           <string name="Source"><![CDATA[-- «Актёр» — любой персонаж на поле: игрок или бот.
@@ -3160,7 +2455,7 @@ return Actors
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="20">
+      <Item class="ModuleScript" referent="18">
         <Properties>
           <string name="Name">BallService</string>
           <string name="Source"><![CDATA[-- Мяч. Сервер решает всё: у кого мяч, куда он летит, принят он или отбит, был ли гол.
@@ -3706,7 +3001,7 @@ return Ball
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="21">
+      <Item class="ModuleScript" referent="19">
         <Properties>
           <string name="Name">BotService</string>
           <string name="Source"><![CDATA[-- Боты-вратари. По одному на команду: держат позицию, прыгают за ударами, выбивают мяч партнёрам.
@@ -4026,11 +3321,12 @@ return Bots
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="22">
+      <Item class="ModuleScript" referent="20">
         <Properties>
           <string name="Name">FieldBuilder</string>
-          <string name="Source"><![CDATA[-- Строит весь стадион из деталей при запуске сервера: газон, разметку, ворота, борта, трибуны, свет.
+          <string name="Source"><![CDATA[-- Строит весь стадион из деталей при запуске сервера: газон, разметку, ворота, борта, трибуны, крышу, небо и свет.
 -- Размеры берутся из Shared/FieldSpec, цвета команд — из Shared/Config.
+-- Вид — дневной: яркий газон в полоску, светлая чаша стадиона с двумя ярусами и крышей, облачное небо.
 
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -4052,16 +3348,12 @@ local HL, HW = F.HalfLength, F.HalfWidth
 local ARENA_X = HL + F.EndMargin
 local ARENA_Z = HW + F.SideMargin
 
-local WHITE = Color3.fromRGB(238, 242, 248)
-local DARK = Color3.fromRGB(26, 28, 36)
-local CONCRETE = Color3.fromRGB(52, 55, 66)
+local WHITE = Color3.fromRGB(244, 246, 250)
+local STEEL = Color3.fromRGB(74, 80, 94)
+local WALKWAY = Color3.fromRGB(152, 158, 170)
 
 local HOME = Config.Teams.Home
 local AWAY = Config.Teams.Away
-
-local function teamOfSide(side: number)
-	return side == HOME.Side and HOME or AWAY
-end
 
 local function newPart(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?): Part
 	local part = Instance.new("Part")
@@ -4140,28 +3432,29 @@ end
 local function buildPitch(root: Instance)
 	local pitch = folder(root, "Pitch")
 
+	-- Площадь вокруг стадиона.
 	local ground = newPart(
 		pitch,
 		"Ground",
-		Vector3.new(F.Length + 520, 6, F.Width + 520),
+		Vector3.new(F.Length + 900, 6, F.Width + 900),
 		at(0, -3.06, 0),
-		Color3.fromRGB(34, 36, 44),
+		Color3.fromRGB(176, 180, 188),
 		Enum.Material.Concrete
 	)
 	ground.CastShadow = false
 
-	-- Полосы газона.
-	local stripes = 13
+	-- Газон: тёмный, насыщенный, с еле заметными полосами покоса.
+	local stripes = 19
 	local stripeWidth = F.Length / stripes
 	for i = 0, stripes - 1 do
 		local x = -HL + stripeWidth * (i + 0.5)
-		local color = i % 2 == 0 and Color3.fromRGB(58, 142, 68) or Color3.fromRGB(49, 126, 58)
+		local color = i % 2 == 0 and Color3.fromRGB(58, 132, 48) or Color3.fromRGB(53, 123, 44)
 		local stripe = newPart(pitch, "Grass", Vector3.new(stripeWidth, 1, F.Width), at(x, -0.5, 0), color, Enum.Material.Grass)
 		stripe.CastShadow = false
 	end
 
-	-- Зона за линиями.
-	local apronColor = Color3.fromRGB(38, 100, 50)
+	-- Газон за линиями до бортов.
+	local apronColor = Color3.fromRGB(50, 116, 42)
 	for _, s in ipairs({ -1, 1 }) do
 		local endApron = newPart(
 			pitch,
@@ -4193,8 +3486,8 @@ local function buildLines(root: Instance)
 	line(lines, HL, -HW, HL, HW)
 	line(lines, 0, -HW, 0, HW)
 
-	arc(lines, 0, 0, F.CenterRadius, 0, 360, 56)
-	spot(lines, 0, 0, 1.2)
+	arc(lines, 0, 0, F.CenterRadius, 0, 360, 72)
+	spot(lines, 0, 0, 1.4)
 
 	for _, s in ipairs({ -1, 1 }) do
 		local goalX = s * HL
@@ -4211,13 +3504,12 @@ local function buildLines(root: Instance)
 		line(lines, areaX, -halfArea, areaX, halfArea)
 
 		local spotX = s * (HL - F.PenaltySpot)
-		spot(lines, spotX, 0, 0.9)
+		spot(lines, spotX, 0, 1.1)
 
 		-- Дуга у штрафной: только та часть, что снаружи площади.
-		local arcRadius = 22
-		local half = math.deg(math.acos((F.PenaltyDepth - F.PenaltySpot) / arcRadius))
+		local half = math.deg(math.acos((F.PenaltyDepth - F.PenaltySpot) / F.PenaltyArc))
 		local centerAngle = s == 1 and 180 or 0
-		arc(lines, spotX, 0, arcRadius, centerAngle - half, centerAngle + half, 16)
+		arc(lines, spotX, 0, F.PenaltyArc, centerAngle - half, centerAngle + half, 20)
 
 		-- Угловые дуги.
 		for _, zs in ipairs({ -1, 1 }) do
@@ -4227,7 +3519,7 @@ local function buildLines(root: Instance)
 			else
 				from = zs == 1 and 270 or 0
 			end
-			arc(lines, goalX, zs * HW, 4, from, from + 90, 6)
+			arc(lines, goalX, zs * HW, 5, from, from + 90, 6)
 		end
 	end
 end
@@ -4239,8 +3531,7 @@ local function cylinder(parent: Instance, name: string, length: number, radius: 
 end
 
 local function buildGoal(root: Instance, side: number)
-	local team = teamOfSide(side)
-	local goal = folder(root, side == -1 and "GoalHome" or "GoalAway")
+	local goal = folder(root, side == HOME.Side and "GoalHome" or "GoalAway")
 	local gx = side * HL
 	local backX = side * (HL + F.GoalDepth)
 	local midX = side * (HL + F.GoalDepth / 2)
@@ -4260,10 +3551,10 @@ local function buildGoal(root: Instance, side: number)
 	decor(cylinder(goal, "BackBar", F.GoalWidth, r * 0.5, at(backX, h, 0) * alongZ, WHITE))
 
 	-- Сетка: тонкие нити без столкновений.
-	local netColor = Color3.fromRGB(225, 230, 240)
+	local netColor = Color3.fromRGB(236, 240, 246)
 	local function strand(size: Vector3, cf: CFrame)
 		local p = newPart(goal, "Net", size, cf, netColor)
-		p.Transparency = 0.35
+		p.Transparency = 0.3
 		decor(p)
 	end
 	local t = 0.12
@@ -4309,31 +3600,9 @@ local function buildGoal(root: Instance, side: number)
 			)
 		)
 	end
-
-	-- Светящаяся полоса в цвет команды за линией ворот.
-	local glow =
-		newPart(goal, "GoalGlow", Vector3.new(1, 0.1, F.GoalWidth - 2), at(side * (HL + 1.6), 0.05, 0), team.Color, Enum.Material.Neon)
-	decor(glow)
 end
 
-local function addBoardText(panel: Part, face: Enum.NormalId, text: string, color: Color3)
-	local gui = Instance.new("SurfaceGui")
-	gui.Face = face
-	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
-	gui.CanvasSize = Vector2.new(900, 70)
-	gui.LightInfluence = 0
-	gui.Parent = panel
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.GothamBlack
-	label.Text = text
-	label.TextColor3 = color
-	label.TextScaled = true
-	label.Parent = gui
-end
-
+-- Борта вокруг поля (мяч от них отскакивает) и невидимые стены до потолка арены.
 local function buildWalls(root: Instance)
 	local walls = folder(root, "Walls")
 	local boardH = 4.5
@@ -4341,42 +3610,48 @@ local function buildWalls(root: Instance)
 	local wallT = 6
 	local wallH = F.WallHeight
 
-	local function board(size: Vector3, cf: CFrame, ledColor: Color3)
-		newPart(walls, "Board", size, cf, DARK, Enum.Material.Metal)
-		local ledSize = Vector3.new(size.X + 0.02, 0.35, size.Z + 0.02)
-		decor(newPart(walls, "BoardLed", ledSize, cf * CFrame.new(0, size.Y / 2 + 0.17, 0), ledColor, Enum.Material.Neon))
+	-- Борт: тёмно-синий корпус и светодиодная панель в цвет команды той половины поля, где он стоит.
+	local function board(length: number, cf: CFrame, color: Color3)
+		newPart(walls, "Board", Vector3.new(length, boardH, boardT), cf, Color3.fromRGB(24, 44, 104), Enum.Material.Metal)
+		local faceCf = cf * CFrame.new(0, -0.2, -boardT / 2 - 0.08)
+		local face = newPart(
+			walls,
+			"BoardFace",
+			Vector3.new(length - 0.6, boardH - 1.4, 0.2),
+			faceCf,
+			color:Lerp(Color3.new(0, 0, 0), 0.25),
+			Enum.Material.Neon
+		)
+		decor(face)
 	end
 
-	-- Боковые борта: половина в цвет каждой команды.
+	local segment = 24
+	-- Боковые борта. Лицевая сторона смотрит на поле (локальная -Z детали).
 	for _, zs in ipairs({ -1, 1 }) do
 		local z = zs * (ARENA_Z + boardT / 2)
-		for _, team in ipairs({ HOME, AWAY }) do
-			board(Vector3.new(ARENA_X, boardH, boardT), at(team.Side * ARENA_X / 2, boardH / 2, z), team.Color)
+		local count = math.floor((ARENA_X * 2 - 32) / segment)
+		local span = (ARENA_X * 2 - 32) / count
+		for i = 0, count - 1 do
+			local x = -ARENA_X + 16 + span * (i + 0.5)
+			local cf = CFrame.lookAt(O + Vector3.new(x, boardH / 2, z), O + Vector3.new(x, boardH / 2, 0))
+			board(span - 0.4, cf, x < 0 and HOME.Color or AWAY.Color)
 		end
 		invisible(
 			newPart(walls, "Wall", Vector3.new(ARENA_X * 2 + wallT * 2, wallH, wallT), at(0, wallH / 2, zs * (ARENA_Z + wallT / 2)), WHITE)
 		)
-
-		-- Рекламные панели с названием игры.
-		local face = zs == 1 and Enum.NormalId.Front or Enum.NormalId.Back
-		for i = -2, 2 do
-			local panel = newPart(
-				walls,
-				"AdPanel",
-				Vector3.new(44, 3.4, 0.2),
-				at(i * 54, boardH / 2, zs * (ARENA_Z - 0.12)),
-				Color3.fromRGB(14, 15, 20)
-			)
-			decor(panel)
-			local color = i < 0 and HOME.Color or (i > 0 and AWAY.Color or WHITE)
-			addBoardText(panel, face, Config.GameTitle, color)
-		end
 	end
 
 	-- Торцевые борта.
 	for _, team in ipairs({ HOME, AWAY }) do
 		local s = team.Side
-		board(Vector3.new(boardT, boardH, ARENA_Z * 2 + boardT * 2), at(s * (ARENA_X + boardT / 2), boardH / 2, 0), team.Color)
+		local x = s * (ARENA_X + boardT / 2)
+		local count = math.floor((ARENA_Z * 2 - 32) / segment)
+		local span = (ARENA_Z * 2 - 32) / count
+		for i = 0, count - 1 do
+			local z = -ARENA_Z + 16 + span * (i + 0.5)
+			local cf = CFrame.lookAt(O + Vector3.new(x, boardH / 2, z), O + Vector3.new(0, boardH / 2, z))
+			board(span - 0.4, cf, team.Color)
+		end
 		invisible(
 			newPart(walls, "Wall", Vector3.new(wallT, wallH, ARENA_Z * 2 + wallT * 2), at(s * (ARENA_X + wallT / 2), wallH / 2, 0), WHITE)
 		)
@@ -4388,18 +3663,7 @@ local function buildWalls(root: Instance)
 		for _, zs in ipairs({ -1, 1 }) do
 			local length = cut * math.sqrt(2) + 2
 			local cf = at(xs * (ARENA_X - cut / 2), 0, zs * (ARENA_Z - cut / 2)) * CFrame.Angles(0, math.rad(xs * zs * 45), 0)
-			local color = teamOfSide(xs).Color
-			newPart(walls, "CornerBoard", Vector3.new(length, boardH, boardT), cf * CFrame.new(0, boardH / 2, 0), DARK, Enum.Material.Metal)
-			decor(
-				newPart(
-					walls,
-					"BoardLed",
-					Vector3.new(length, 0.35, boardT + 0.02),
-					cf * CFrame.new(0, boardH + 0.17, 0),
-					color,
-					Enum.Material.Neon
-				)
-			)
+			newPart(walls, "CornerBoard", Vector3.new(length, boardH, boardT), cf * CFrame.new(0, boardH / 2, 0), WHITE)
 			invisible(newPart(walls, "CornerWall", Vector3.new(length, wallH, 4), cf * CFrame.new(0, wallH / 2, 0), WHITE))
 		end
 	end
@@ -4407,114 +3671,275 @@ local function buildWalls(root: Instance)
 	invisible(newPart(walls, "Ceiling", Vector3.new(ARENA_X * 2 + 20, 6, ARENA_Z * 2 + 20), at(0, wallH + 3, 0), WHITE))
 end
 
+---------------------------------------------------------------------------
+-- Трибуны: высокая закрытая чаша — два крутых яруса, плотная мозаика зрителей,
+-- синие светящиеся линии по ярусам и крыша-кольцо с открытым небом над полем.
+---------------------------------------------------------------------------
+
+local STAND_GAP = 7 -- проход между бортом и первым рядом
+local LOWER_ROWS, LOWER_RISE = 12, 2.8
+local UPPER_ROWS, UPPER_RISE = 14, 3.8
+local ROW_DEPTH = 4.5
+local LOWER_BASE = 4.5
+local LOWER_TOP = LOWER_BASE + LOWER_ROWS * LOWER_RISE
+local UPPER_BASE = LOWER_TOP + 8
+local UPPER_TOP = UPPER_BASE + UPPER_ROWS * UPPER_RISE
+local FASCIA_DEPTH = 4
+local UPPER_FRONT = LOWER_ROWS * ROW_DEPTH + FASCIA_DEPTH
+local BACK = UPPER_FRONT + UPPER_ROWS * ROW_DEPTH
+local STAND_DEPTH = BACK + 3
+local ROOF_Y = UPPER_TOP + 14
+local ROOF_INNER = -12 -- крыша нависает над проходом перед трибуной
+
+local LED_BLUE = Color3.fromRGB(46, 118, 255)
+local STRUCTURE_BLUE = Color3.fromRGB(34, 66, 156)
+local STRUCTURE_DARK = Color3.fromRGB(24, 44, 104)
+local TIER_LIGHT = Color3.fromRGB(198, 206, 224)
+local TIER_SHADE = Color3.fromRGB(182, 191, 212)
+
+-- Зрители: каждый ряд — цепочка коротких цветных отрезков. Издалека это читается как плотная толпа.
+local CROWD_SEGMENT_MIN, CROWD_SEGMENT_MAX = 3, 8
 local CROWD_NEUTRAL = {
-	Color3.fromRGB(230, 230, 235),
-	Color3.fromRGB(60, 62, 74),
-	Color3.fromRGB(245, 205, 90),
-	Color3.fromRGB(150, 155, 170),
+	{ Color3.fromRGB(246, 247, 252), 30 },
+	{ Color3.fromRGB(30, 40, 86), 12 },
+	{ Color3.fromRGB(150, 160, 186), 8 },
 }
 
-local function buildStands(root: Instance)
-	local stands = folder(root, "Stands")
-	local crowd = folder(stands, "Crowd")
-	local rng = Random.new(20241)
-	local rowDepth = 5
-	local rowRise = 3.2
-	local baseTop = 6
+local function rival(team)
+	return team == HOME and AWAY or HOME
+end
 
-	local function fan(x: number, y: number, z: number, team)
-		local color
-		if rng:NextNumber() < 0.6 then
-			color = team.Color:Lerp(Color3.new(1, 1, 1), rng:NextNumber() * 0.35)
-		else
-			color = CROWD_NEUTRAL[rng:NextInteger(1, #CROWD_NEUTRAL)]
+local function crowdColor(rng: Random, team): Color3
+	-- Почти половина мест — цвет команды этой трибуны, примерно каждое восьмое — цвет соперника.
+	local roll = rng:NextNumber() * 100
+	if roll < 46 then
+		return team.Color:Lerp(Color3.new(1, 1, 1), rng:NextNumber() * 0.25)
+	elseif roll < 58 then
+		return rival(team).Color:Lerp(Color3.new(1, 1, 1), rng:NextNumber() * 0.25)
+	end
+	roll = rng:NextNumber() * 50
+	for _, entry in ipairs(CROWD_NEUTRAL) do
+		roll -= entry[2]
+		if roll <= 0 then
+			return entry[1]
 		end
-		local body = newPart(crowd, "Fan", Vector3.new(1.5, 2.3 + rng:NextNumber() * 0.5, 1.2), at(x, y + 1.2, z), color)
-		decor(body)
+	end
+	return CROWD_NEUTRAL[1][1]
+end
+
+-- Одна сторона чаши. frame — система координат стороны: X вдоль трибуны, Z — от поля наружу,
+-- начало — у переднего края первого ряда на уровне газона.
+local function buildStandSide(parent: Instance, frame: CFrame, length: number, team, rng: Random, withTunnel: boolean)
+	local stands = folder(parent, "Stand")
+	local crowd = folder(stands, "Crowd")
+
+	local function local_(x: number, y: number, z: number): CFrame
+		return frame * CFrame.new(x, y, z)
 	end
 
-	-- Боковые трибуны (вдоль длинных сторон).
-	local sideRows = 8
-	local sideLength = ARENA_X * 2
-	for _, zs in ipairs({ -1, 1 }) do
-		for row = 0, sideRows - 1 do
-			local top = baseTop + row * rowRise
-			local z = zs * (ARENA_Z + 8 + rowDepth * (row + 0.5))
-			local shade = row % 2 == 0 and CONCRETE or Color3.fromRGB(44, 46, 56)
-			newPart(stands, "Tier", Vector3.new(sideLength, top, rowDepth), at(0, top / 2, z), shade, Enum.Material.Concrete)
-			for _, team in ipairs({ HOME, AWAY }) do
-				local seat = newPart(
-					stands,
-					"Seats",
-					Vector3.new(sideLength / 2 - 2, 0.5, rowDepth - 1.6),
-					at(team.Side * sideLength / 4, top + 0.25, z),
-					team.Color:Lerp(DARK, 0.55)
-				)
-				decor(seat)
+	local function crowdRow(top: number, z: number, gap: number?)
+		local x = -length / 2 + 1
+		while x < length / 2 - 1 do
+			local segment = math.min(CROWD_SEGMENT_MIN + rng:NextNumber() * (CROWD_SEGMENT_MAX - CROWD_SEGMENT_MIN), length / 2 - 1 - x)
+			local mid = x + segment / 2
+			if not (gap and math.abs(mid) < gap) then
+				local height = 2 + rng:NextNumber() * 0.5
+				local size = Vector3.new(segment - 0.15, height, 1.8)
+				decor(newPart(crowd, "Fans", size, local_(mid, top + height / 2, z - 0.6), crowdColor(rng, team)))
 			end
-			for x = -ARENA_X + 3, ARENA_X - 3, 5 do
-				if rng:NextNumber() < 0.55 then
-					fan(x + rng:NextNumber() * 2, top + 0.5, z, x < 0 and HOME or AWAY)
-				end
-			end
+			x += segment
 		end
-		-- Козырёк.
-		local roofZ = zs * (ARENA_Z + 8 + rowDepth * sideRows - 14)
-		local roofY = baseTop + sideRows * rowRise + 16
-		local roofCf = at(0, roofY, roofZ) * CFrame.Angles(math.rad(zs * 10), 0, 0)
-		local roof = newPart(stands, "Roof", Vector3.new(sideLength + 30, 1.5, 44), roofCf, DARK, Enum.Material.Metal)
-		roof.CanCollide = false
+	end
+
+	local function tier(rows: number, rise: number, base: number, front: number, gapRows: number?, gap: number?)
+		for row = 0, rows - 1 do
+			local top = base + row * rise
+			local z = front + ROW_DEPTH * (row + 0.5)
+			local shade = row % 2 == 0 and TIER_LIGHT or TIER_SHADE
+			newPart(stands, "Tier", Vector3.new(length, top, ROW_DEPTH), local_(0, top / 2, z), shade, Enum.Material.Concrete)
+			crowdRow(top, z, (gapRows and row < gapRows) and gap or nil)
+		end
+	end
+
+	-- Проход перед трибуной и низкая стенка с синей светящейся линией.
+	local walkway = newPart(
+		stands,
+		"Walkway",
+		Vector3.new(length, 0.4, STAND_GAP + 1),
+		local_(0, 0.2, -STAND_GAP / 2 - 0.5),
+		WALKWAY,
+		Enum.Material.Concrete
+	)
+	decor(walkway)
+	newPart(stands, "FrontWall", Vector3.new(length, LOWER_BASE, 1.2), local_(0, LOWER_BASE / 2, 0.6), STRUCTURE_DARK)
+	decor(newPart(stands, "FrontLed", Vector3.new(length, 0.5, 0.3), local_(0, LOWER_BASE - 0.6, -0.1), LED_BLUE, Enum.Material.Neon))
+
+	-- Туннель выхода игроков в середине нижнего яруса.
+	local tunnelRows, tunnelHalf = 5, 14
+	if withTunnel then
+		tier(LOWER_ROWS, LOWER_RISE, LOWER_BASE, 0, tunnelRows, tunnelHalf)
+		local depth = tunnelRows * ROW_DEPTH
+		local height = LOWER_BASE + tunnelRows * LOWER_RISE + 1
 		decor(
 			newPart(
 				stands,
-				"RoofLed",
-				Vector3.new(sideLength + 30, 0.6, 0.8),
-				roofCf * CFrame.new(0, -0.8, -zs * 21.5),
-				WHITE,
-				Enum.Material.Neon
+				"Tunnel",
+				Vector3.new(tunnelHalf * 2, height, depth),
+				local_(0, height / 2, depth / 2 - 0.4),
+				Color3.fromRGB(14, 20, 44)
+			)
+		)
+		for _, xs in ipairs({ -1, 1 }) do
+			decor(
+				newPart(
+					stands,
+					"TunnelLed",
+					Vector3.new(0.5, height, 0.5),
+					local_(xs * tunnelHalf, height / 2, -0.7),
+					LED_BLUE,
+					Enum.Material.Neon
+				)
+			)
+		end
+		decor(
+			newPart(stands, "TunnelLed", Vector3.new(tunnelHalf * 2 + 0.5, 0.5, 0.5), local_(0, height, -0.7), LED_BLUE, Enum.Material.Neon)
+		)
+	else
+		tier(LOWER_ROWS, LOWER_RISE, LOWER_BASE, 0)
+	end
+
+	-- Пояс между ярусами: синий, со светящимися линиями.
+	local fasciaZ = LOWER_ROWS * ROW_DEPTH + FASCIA_DEPTH / 2
+	local fasciaFace = fasciaZ - FASCIA_DEPTH / 2 - 0.15
+	newPart(stands, "Fascia", Vector3.new(length, UPPER_BASE, FASCIA_DEPTH), local_(0, UPPER_BASE / 2, fasciaZ), STRUCTURE_BLUE)
+	decor(
+		newPart(stands, "FasciaLed", Vector3.new(length, 0.9, 0.3), local_(0, UPPER_BASE - 1.6, fasciaFace), LED_BLUE, Enum.Material.Neon)
+	)
+	decor(newPart(stands, "FasciaLed", Vector3.new(length, 0.5, 0.3), local_(0, LOWER_TOP + 1.2, fasciaFace), WHITE, Enum.Material.Neon))
+
+	tier(UPPER_ROWS, UPPER_RISE, UPPER_BASE, UPPER_FRONT)
+
+	-- Растяжки болельщиков на верхнем ярусе: полотна в цвет команды, лежат по склону трибуны.
+	local slope = math.atan2(UPPER_RISE, ROW_DEPTH)
+	local banners = math.max(2, math.floor(length / 70))
+	for i = 1, banners do
+		local x = -length / 2 + length * (i - 0.5) / banners + (rng:NextNumber() - 0.5) * 20
+		local row = rng:NextInteger(3, UPPER_ROWS - 4)
+		local y = UPPER_BASE + row * UPPER_RISE + 3.2
+		local z = UPPER_FRONT + ROW_DEPTH * (row + 0.5)
+		local cf = local_(x, y, z) * CFrame.Angles(-slope, 0, 0)
+		local color = rng:NextNumber() < 0.75 and team.Color or rival(team).Color
+		decor(newPart(stands, "Banner", Vector3.new(16, 0.3, 11), cf, color))
+		decor(newPart(stands, "Banner", Vector3.new(16, 0.32, 2.4), cf, WHITE))
+	end
+
+	-- Задняя стена до крыши.
+	newPart(stands, "BackWall", Vector3.new(length, ROOF_Y, 3), local_(0, ROOF_Y / 2, BACK + 1.5), STRUCTURE_BLUE, Enum.Material.Metal)
+
+	-- Крыша: панели (белые и голубые, как стекло) на синих фермах, по краю — светящаяся линия.
+	local roofDepth = STAND_DEPTH - ROOF_INNER + 2
+	local roofZ = ROOF_INNER + roofDepth / 2
+	local panels = math.max(2, math.floor(length / 14))
+	for i = 0, panels - 1 do
+		local x = -length / 2 + length * (i + 0.5) / panels
+		local color = i % 2 == 0 and Color3.fromRGB(236, 242, 252) or Color3.fromRGB(196, 220, 252)
+		local panel = newPart(stands, "RoofPanel", Vector3.new(length / panels - 0.3, 1.2, roofDepth), local_(x, ROOF_Y, roofZ), color)
+		panel.CanCollide = false
+	end
+	for i = 0, panels do
+		local x = -length / 2 + length * i / panels
+		decor(
+			newPart(
+				stands,
+				"RoofTruss",
+				Vector3.new(1.2, 3.4, roofDepth),
+				local_(x, ROOF_Y - 2.2, roofZ),
+				STRUCTURE_BLUE,
+				Enum.Material.Metal
 			)
 		)
 	end
+	decor(
+		newPart(
+			stands,
+			"RoofEdge",
+			Vector3.new(length + 2, 4.5, 1.6),
+			local_(0, ROOF_Y - 1.4, ROOF_INNER),
+			STRUCTURE_BLUE,
+			Enum.Material.Metal
+		)
+	)
+	decor(
+		newPart(
+			stands,
+			"RoofLed",
+			Vector3.new(length + 2, 0.7, 0.3),
+			local_(0, ROOF_Y - 2.6, ROOF_INNER - 0.9),
+			LED_BLUE,
+			Enum.Material.Neon
+		)
+	)
+	local lights = newPart(
+		stands,
+		"RoofLights",
+		Vector3.new(length * 0.94, 0.7, 1),
+		local_(0, ROOF_Y - 4.2, ROOF_INNER + 2),
+		Color3.fromRGB(255, 250, 236),
+		Enum.Material.Neon
+	)
+	decor(lights)
+end
 
-	-- Торцевые трибуны (за воротами).
-	local endRows = 6
-	local endLength = ARENA_Z * 2
+local function buildStands(root: Instance)
+	local stands = folder(root, "Stands")
+	local rng = Random.new(20241)
+	local sideFront = ARENA_Z + STAND_GAP
+	local endFront = ARENA_X + STAND_GAP
+	-- Боковые трибуны тянутся через углы до задних стен торцов — чаша получается сплошной, без пустых углов.
+	local sideLength = (endFront + STAND_DEPTH) * 2
+	local endLength = sideFront * 2
+
+	-- Боковые трибуны: одна болеет за HOME, другая за AWAY. Туннель — на трибуне HOME.
+	for _, zs in ipairs({ -1, 1 }) do
+		local origin = O + Vector3.new(0, 0, zs * sideFront)
+		local out = Vector3.new(0, 0, zs)
+		local frame = CFrame.lookAt(origin, origin - out)
+		buildStandSide(stands, frame, sideLength, zs == 1 and HOME or AWAY, rng, zs == 1)
+	end
+	-- Торцевые трибуны: за воротами каждой команды — её болельщики.
 	for _, team in ipairs({ HOME, AWAY }) do
-		local s = team.Side
-		for row = 0, endRows - 1 do
-			local top = baseTop + row * rowRise
-			local x = s * (ARENA_X + 8 + rowDepth * (row + 0.5))
-			local shade = row % 2 == 0 and CONCRETE or Color3.fromRGB(44, 46, 56)
-			newPart(stands, "Tier", Vector3.new(rowDepth, top, endLength), at(x, top / 2, 0), shade, Enum.Material.Concrete)
-			decor(
-				newPart(stands, "Seats", Vector3.new(rowDepth - 1.6, 0.5, endLength - 2), at(x, top + 0.25, 0), team.Color:Lerp(DARK, 0.55))
-			)
-			for z = -ARENA_Z + 3, ARENA_Z - 3, 5 do
-				if rng:NextNumber() < 0.55 then
-					fan(x, top + 0.5, z + rng:NextNumber() * 2, team)
-				end
-			end
-		end
+		local origin = O + Vector3.new(team.Side * endFront, 0, 0)
+		local out = Vector3.new(team.Side, 0, 0)
+		local frame = CFrame.lookAt(origin, origin - out)
+		buildStandSide(stands, frame, endLength, team, rng, false)
 	end
 end
 
+-- Большие экраны под крышей за каждыми воротами: HOME — счёт — AWAY и время.
 local function buildScoreboard(root: Instance, side: number)
-	local screens = folder(root, side == -1 and "ScreenHome" or "ScreenAway")
-	local x = side * (ARENA_X + 8 + 5 * 6 + 6)
-	local y = 6 + 6 * 3.2 + 22
-	local frame = newPart(screens, "Frame", Vector3.new(3, 30, 74), at(x + side * 0.6, y, 0), DARK, Enum.Material.Metal)
+	local screens = folder(root, side == HOME.Side and "ScreenHome" or "ScreenAway")
+	local x = side * (ARENA_X + STAND_GAP + UPPER_FRONT - 8)
+	local y = ROOF_Y - 19
+	local width, height = 78, 26
+	local frame = newPart(screens, "Frame", Vector3.new(2.4, height + 3, width + 3), at(x + side * 0.6, y, 0), STEEL, Enum.Material.Metal)
 	frame.CanCollide = false
 	for _, zs in ipairs({ -1, 1 }) do
-		local pole = newPart(screens, "Pole", Vector3.new(3, y, 3), at(x + side * 0.6, y / 2, zs * 30), DARK, Enum.Material.Metal)
-		pole.CanCollide = false
+		local cable = newPart(
+			screens,
+			"Cable",
+			Vector3.new(0.5, ROOF_Y - y - height / 2, 0.5),
+			at(x, (ROOF_Y + y + height / 2) / 2, zs * width * 0.4),
+			STEEL
+		)
+		decor(cable)
 	end
-	local screen = newPart(screens, "Screen", Vector3.new(0.4, 26, 70), at(x - side * 1.1, y, 0), Color3.fromRGB(10, 11, 16))
+	local screen = newPart(screens, "Screen", Vector3.new(0.4, height, width), at(x - side * 1, y, 0), Color3.fromRGB(12, 14, 22))
 	decor(screen)
 
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = side == 1 and Enum.NormalId.Left or Enum.NormalId.Right
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
-	gui.CanvasSize = Vector2.new(1050, 390)
+	gui.CanvasSize = Vector2.new(1200, 400)
 	gui.LightInfluence = 0
 	gui.Parent = screen
 
@@ -4531,43 +3956,29 @@ local function buildScoreboard(root: Instance, side: number)
 		return l
 	end
 
-	label(Config.GameTitle, UDim2.fromScale(0.2, 0.04), UDim2.fromScale(0.6, 0.16), WHITE)
-	label(HOME.Name, UDim2.fromScale(0.03, 0.24), UDim2.fromScale(0.3, 0.2), HOME.Color)
-	label(AWAY.Name, UDim2.fromScale(0.67, 0.24), UDim2.fromScale(0.3, 0.2), AWAY.Color)
-	local score = label("0 : 0", UDim2.fromScale(0.25, 0.4), UDim2.fromScale(0.5, 0.4), WHITE)
-	local clock = label("5:00", UDim2.fromScale(0.36, 0.8), UDim2.fromScale(0.28, 0.16), Color3.fromRGB(255, 221, 120))
+	local function band(team, position: UDim2)
+		local block = Instance.new("Frame")
+		block.BackgroundColor3 = team.Color
+		block.BorderSizePixel = 0
+		block.Position = position
+		block.Size = UDim2.fromScale(0.26, 0.42)
+		block.Parent = gui
+		local l = Instance.new("TextLabel")
+		l.BackgroundTransparency = 1
+		l.Font = Enum.Font.GothamBlack
+		l.Text = team.Name
+		l.TextColor3 = Color3.new(1, 1, 1)
+		l.TextScaled = true
+		l.Size = UDim2.fromScale(1, 1)
+		l.Parent = block
+	end
+
+	band(HOME, UDim2.fromScale(0.04, 0.12))
+	band(AWAY, UDim2.fromScale(0.7, 0.12))
+	local score = label("0 : 0", UDim2.fromScale(0.32, 0.08), UDim2.fromScale(0.36, 0.5), WHITE)
+	local clock = label("5:00", UDim2.fromScale(0.36, 0.64), UDim2.fromScale(0.28, 0.26), Color3.fromRGB(255, 221, 120))
 	table.insert(FieldBuilder.scoreLabels, score)
 	table.insert(FieldBuilder.timeLabels, clock)
-end
-
-local function buildLights(root: Instance)
-	local lights = folder(root, "Lights")
-	local towerX = ARENA_X + 58
-	local towerZ = ARENA_Z + 66
-	for _, xs in ipairs({ -1, 1 }) do
-		for _, zs in ipairs({ -1, 1 }) do
-			local height = 96
-			local pole =
-				newPart(lights, "Tower", Vector3.new(4, height, 4), at(xs * towerX, height / 2, zs * towerZ), DARK, Enum.Material.Metal)
-			pole.CanCollide = false
-			local headPosition = O + Vector3.new(xs * towerX, height + 4, zs * towerZ)
-			local panelCf = CFrame.lookAt(headPosition, O)
-			decor(newPart(lights, "LampFrame", Vector3.new(30, 16, 2), panelCf, DARK, Enum.Material.Metal))
-			for row = -1, 1 do
-				for col = -3, 3 do
-					local lamp = newPart(
-						lights,
-						"Lamp",
-						Vector3.new(3.2, 3.6, 0.6),
-						panelCf * CFrame.new(col * 4, row * 4.8, -1.2),
-						Color3.fromRGB(255, 249, 232),
-						Enum.Material.Neon
-					)
-					decor(lamp)
-				end
-			end
-		end
-	end
 end
 
 local function buildSpawns(root: Instance)
@@ -4580,7 +3991,7 @@ local function buildSpawns(root: Instance)
 		spawn.CanTouch = false
 		spawn.Transparency = 1
 		spawn.Size = Vector3.new(18, 1, 18)
-		spawn.CFrame = CFrame.new(F.fromOwnGoal(team.Side, 60, 0) + Vector3.new(0, -0.5, 0))
+		spawn.CFrame = CFrame.new(F.fromOwnGoal(team.Side, 80, 0) + Vector3.new(0, -0.5, 0))
 		spawn.Neutral = false
 		spawn.TeamColor = BrickColor.new(team.Color)
 		spawn.AllowTeamChangeOnTouch = false
@@ -4589,45 +4000,72 @@ local function buildSpawns(root: Instance)
 	end
 end
 
+-- Дневной свет: высокое солнце, мягкие тени, яркие чуть голубоватые тона, облака над открытой крышей.
 local function setupLighting()
-	Lighting.ClockTime = 20.5
-	Lighting.GeographicLatitude = 28
-	Lighting.Brightness = 2.4
-	Lighting.Ambient = Color3.fromRGB(118, 122, 150)
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 156, 188)
-	Lighting.ColorShift_Top = Color3.fromRGB(200, 215, 255)
-	Lighting.EnvironmentDiffuseScale = 0.6
-	Lighting.EnvironmentSpecularScale = 0.5
-	Lighting.ExposureCompensation = 0.45
+	Lighting.ClockTime = 14.4
+	Lighting.GeographicLatitude = 32
+	Lighting.Brightness = 2.6
+	Lighting.Ambient = Color3.fromRGB(128, 136, 162)
+	Lighting.OutdoorAmbient = Color3.fromRGB(166, 178, 208)
+	Lighting.ColorShift_Top = Color3.fromRGB(236, 243, 255)
+	Lighting.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+	Lighting.EnvironmentDiffuseScale = 1
+	Lighting.EnvironmentSpecularScale = 0.7
+	Lighting.ExposureCompensation = 0.1
+	Lighting.ShadowSoftness = 0.3
 	Lighting.GlobalShadows = true
 	Lighting.FogEnd = 100000
 
 	for _, child in ipairs(Lighting:GetChildren()) do
-		if child:IsA("PostEffect") or child:IsA("Atmosphere") then
+		if child:IsA("PostEffect") or child:IsA("Atmosphere") or child:IsA("Sky") then
 			child:Destroy()
 		end
 	end
 
+	local sky = Instance.new("Sky")
+	sky.SunAngularSize = 14
+	sky.Parent = Lighting
+
 	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Density = 0.24
-	atmosphere.Offset = 0.2
-	atmosphere.Color = Color3.fromRGB(168, 182, 222)
-	atmosphere.Decay = Color3.fromRGB(70, 82, 130)
-	atmosphere.Glare = 0
+	atmosphere.Density = 0.3
+	atmosphere.Offset = 0.1
+	atmosphere.Color = Color3.fromRGB(190, 214, 255)
+	atmosphere.Decay = Color3.fromRGB(92, 132, 212)
+	atmosphere.Glare = 0.2
 	atmosphere.Haze = 1.4
 	atmosphere.Parent = Lighting
 
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.55
-	bloom.Size = 26
-	bloom.Threshold = 1.15
+	bloom.Intensity = 0.35
+	bloom.Size = 24
+	bloom.Threshold = 1.7
 	bloom.Parent = Lighting
 
+	local rays = Instance.new("SunRaysEffect")
+	rays.Intensity = 0.05
+	rays.Spread = 0.6
+	rays.Parent = Lighting
+
 	local grade = Instance.new("ColorCorrectionEffect")
-	grade.Contrast = 0.1
-	grade.Saturation = 0.16
-	grade.TintColor = Color3.fromRGB(246, 248, 255)
+	grade.Brightness = 0.03
+	grade.Contrast = 0.06
+	grade.Saturation = 0.18
+	grade.TintColor = Color3.fromRGB(242, 246, 255)
 	grade.Parent = Lighting
+
+	-- Облака живут в Terrain.
+	local terrain = Workspace:FindFirstChildOfClass("Terrain")
+	if terrain then
+		local old = terrain:FindFirstChildOfClass("Clouds")
+		if old then
+			old:Destroy()
+		end
+		local clouds = Instance.new("Clouds")
+		clouds.Cover = 0.55
+		clouds.Density = 0.6
+		clouds.Color = Color3.fromRGB(255, 255, 255)
+		clouds.Parent = terrain
+	end
 end
 
 -- Создаёт две команды в сервисе Teams (если их ещё нет).
@@ -4667,7 +4105,6 @@ function FieldBuilder.build()
 	buildStands(root)
 	buildScoreboard(root, -1)
 	buildScoreboard(root, 1)
-	buildLights(root)
 	buildSpawns(root)
 	setupLighting()
 
@@ -4679,7 +4116,7 @@ return FieldBuilder
 ]]></string>
         </Properties>
       </Item>
-      <Item class="Script" referent="23">
+      <Item class="Script" referent="21">
         <Properties>
           <string name="Name">Main</string>
           <token name="RunContext">0</token>
@@ -4740,7 +4177,7 @@ print(string.format("[%s] сервер запущен, RemoteEvents: %s", "Reson
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="24">
+      <Item class="ModuleScript" referent="22">
         <Properties>
           <string name="Name">MatchService</string>
           <string name="Source"><![CDATA[-- Ход матча: розыгрыш с центра -> игра -> гол -> розыгрыш ... -> финальный свисток -> новый матч.
@@ -5010,7 +4447,7 @@ return Match
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="25">
+      <Item class="ModuleScript" referent="23">
         <Properties>
           <string name="Name">Net</string>
           <string name="Source"><![CDATA[-- Создаёт RemoteEvent'ы и даёт короткие функции для отправки эффектов клиентам.
@@ -5049,7 +4486,7 @@ return Net
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="26">
+      <Item class="ModuleScript" referent="24">
         <Properties>
           <string name="Name">Physics</string>
           <string name="Source"><![CDATA[-- Группы столкновений.
@@ -5100,7 +4537,7 @@ return Physics
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="27">
+      <Item class="ModuleScript" referent="25">
         <Properties>
           <string name="Name">PlayerService</string>
           <string name="Source"><![CDATA[-- Игроки: распределение по командам, регистрация персонажа как «актёра», командные метки.
@@ -5189,7 +4626,8 @@ local function addKit(actor, displayName: string)
 
 	local function refreshStyle()
 		local style = Styles.get(character:GetAttribute("Style"))
-		styleLabel.Text = Util.upper(style.name)
+		-- Служебные стили (базовый, вратарь) в табличке не пишем.
+		styleLabel.Text = style.selectable == false and "" or Util.upper(style.name)
 		styleLabel.TextColor3 = style.color
 	end
 	refreshStyle()
@@ -5354,25 +4792,26 @@ return PlayerService
       </Item>
     </Item>
   </Item>
-  <Item class="StarterPlayer" referent="28">
+  <Item class="StarterPlayer" referent="26">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">40</float>
       <float name="CameraMinZoomDistance">6</float>
       <token name="GameSettingsAvatar">0</token>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="29">
+    <Item class="StarterPlayerScripts" referent="27">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="30">
+      <Item class="Folder" referent="28">
         <Properties>
           <string name="Name">Client</string>
         </Properties>
-        <Item class="ModuleScript" referent="31">
+        <Item class="ModuleScript" referent="29">
           <Properties>
             <string name="Name">BallVisuals</string>
-            <string name="Source"><![CDATA[-- Всё, что делает мяч красивым на клиенте: шлейф, вращение при ведении, вспышки при отскоках, метка над мячом.
+            <string name="Source"><![CDATA[-- Всё, что делает мяч красивым на клиенте: шлейф, вращение при ведении, вспышки при отскоках, метка над мячом
+-- и полупрозрачные круги на газоне вокруг игрока с мячом.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -5380,6 +4819,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local FieldSpec = require(Shared.FieldSpec)
 local Fx = require(script.Parent.Fx)
 local State = require(script.Parent.State)
 
@@ -5394,6 +4834,13 @@ local trail: Trail? = nil
 local glow: PointLight? = nil
 local marker: BillboardGui? = nil
 
+local rings = {} -- круги вокруг игрока с мячом: от внешнего к внутреннему
+local RINGS = {
+	-- радиус, прозрачность, цвет
+	{ 11, 0.82, Color3.fromRGB(200, 236, 200) },
+	{ 7.5, 0.78, Color3.fromRGB(176, 220, 176) },
+	{ 4.2, 0.7, Color3.fromRGB(150, 200, 150) },
+}
 local trailMode: any = nil -- false = обычный шлейф, Color3 = цветной шлейф способности
 local rollAngle = 0
 local dribblePhase = 0
@@ -5464,6 +4911,41 @@ local function build(part: BasePart)
 	stroke.Parent = diamond
 	gui.Parent = holder
 	marker = gui
+
+	for index, spec in ipairs(RINGS) do
+		local disc = Instance.new("Part")
+		disc.Name = "BallRing"
+		disc.Shape = Enum.PartType.Cylinder
+		disc.Anchored = true
+		disc.CanCollide = false
+		disc.CanTouch = false
+		disc.CanQuery = false
+		disc.CastShadow = false
+		disc.Material = Enum.Material.SmoothPlastic
+		disc.Color = spec[3]
+		disc.Size = Vector3.new(0.05, spec[1] * 2, spec[1] * 2)
+		disc.Transparency = 1
+		disc:SetAttribute("Alpha", spec[2])
+		disc:SetAttribute("Lift", 0.05 + index * 0.02) -- чуть разная высота, чтобы круги не мерцали
+		disc.Parent = Workspace
+		rings[index] = disc
+	end
+end
+
+-- Круги лежат на газоне под тем, у кого мяч; без владельца — скрыты.
+local function updateRings(part: BasePart)
+	local joint = part:FindFirstChild("BallJoint")
+	local carrier = joint and joint:IsA("Motor6D") and joint.Part0 or nil
+	local groundY = FieldSpec.Origin.Y
+	for _, disc in ipairs(rings) do
+		if carrier then
+			local p = carrier.Position
+			disc.CFrame = CFrame.new(p.X, groundY + disc:GetAttribute("Lift"), p.Z) * CFrame.Angles(0, 0, math.rad(90))
+			disc.Transparency = disc:GetAttribute("Alpha")
+		elseif disc.Transparency < 1 then
+			disc.Transparency = 1
+		end
+	end
 end
 
 local function updateTrail(part: BasePart, held: boolean, speed: number)
@@ -5507,6 +4989,7 @@ local function onRender()
 	holder.CFrame = CFrame.new(position)
 
 	local held = part:GetAttribute("Held") == true
+	updateRings(part)
 	local velocity = part.AssemblyLinearVelocity
 	local speed = velocity.Magnitude
 	updateTrail(part, held, speed)
@@ -5572,7 +5055,7 @@ return BallVisuals
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="32">
+        <Item class="ModuleScript" referent="30">
           <Properties>
             <string name="Name">Controls</string>
             <string name="Source"><![CDATA[-- Управление. Клавиши задаются в Config.Controls; на телефоне появляются сенсорные кнопки.
@@ -5589,6 +5072,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local FieldSpec = require(Shared.FieldSpec)
 local Mover = require(Shared.Mover)
+local Styles = require(Shared.Styles)
 local Util = require(Shared.Util)
 local ProcAnimator = require(script.Parent.ProcAnimator)
 local State = require(script.Parent.State)
@@ -6076,27 +5560,18 @@ function Controls.start()
 	)
 	bind("RS_Action", CONTROLS.Action, onPress(doAction))
 	bind("RS_Dash", CONTROLS.Dash, onPress(doDash))
-	bind(
-		"RS_Ability1",
-		CONTROLS.Ability1,
-		onPress(function()
-			doAbility(1)
-		end)
-	)
-	bind(
-		"RS_Ability2",
-		CONTROLS.Ability2,
-		onPress(function()
-			doAbility(2)
-		end)
-	)
-	bind(
-		"RS_Ability3",
-		CONTROLS.Ability3,
-		onPress(function()
-			doAbility(3)
-		end)
-	)
+	-- Способности есть только у стилей; пока стили отключены, клавиши Z/X/C свободны.
+	if Styles.enabled then
+		for slot = 1, 3 do
+			bind(
+				"RS_Ability" .. slot,
+				(CONTROLS :: any)["Ability" .. slot],
+				onPress(function()
+					doAbility(slot)
+				end)
+			)
+		end
+	end
 
 	-- Бег привязан с высоким приоритетом и «поглощает» клавишу: иначе Shift заодно
 	-- переключал бы стандартную блокировку камеры Roblox.
@@ -6149,7 +5624,7 @@ return Controls
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="33">
+        <Item class="ModuleScript" referent="31">
           <Properties>
             <string name="Name">Fx</string>
             <string name="Source"><![CDATA[-- Набор визуальных эффектов. Всё собирается из обычных деталей, частиц и лучей — без загруженных ассетов.
@@ -6678,7 +6153,7 @@ return Fx
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="34">
+        <Item class="ModuleScript" referent="32">
           <Properties>
             <string name="Name">FxEvents</string>
             <string name="Source"><![CDATA[-- Принимает события Fx от сервера и превращает их в анимации, эффекты и звуки.
@@ -6956,7 +6431,7 @@ return FxEvents
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="35">
+        <Item class="ModuleScript" referent="33">
           <Properties>
             <string name="Name">Hud</string>
             <string name="Source"><![CDATA[-- Интерфейс: табло, баннеры, полоски сил/резонанса/удара, слоты способностей, подсказка, меню стилей.
@@ -6987,6 +6462,10 @@ local GOLD = Color3.fromRGB(255, 224, 120)
 local RED = Color3.fromRGB(255, 92, 92)
 local HOME, AWAY = Config.Teams.Home, Config.Teams.Away
 local RES_MAX = Config.Resonance.Max
+-- Пока в игре нет выбираемых стилей, меню стилей, способности и Резонанс не показываем.
+local STYLES_ON = Styles.enabled
+-- Без шкалы Резонанса полоски внизу на одну строку ниже.
+local BARS_SHIFT = STYLES_ON and 0 or 22
 
 local root: Frame
 local rootScale: UIScale
@@ -7073,77 +6552,76 @@ end
 
 local homeScore: TextLabel, awayScore: TextLabel, clock: TextLabel, phaseLabel: TextLabel
 
+-- Счёт сверху по центру без плашки: «HOME : 0   4:17   0 : AWAY».
+local SCORE_FONT = Enum.Font.FredokaOne
+local OUTLINE = Color3.fromRGB(10, 14, 32)
+
 local function buildScoreboard()
 	local board = make("Frame", {
 		Name = "Scoreboard",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 14),
-		Size = UDim2.fromOffset(470, 56),
-		BackgroundColor3 = PANEL,
-		BackgroundTransparency = 0.12,
-		BorderSizePixel = 0,
+		Position = UDim2.new(0.5, 0, 0, 10),
+		Size = UDim2.fromOffset(520, 40),
+		BackgroundTransparency = 1,
 	}, root)
-	corner(board, 14)
-	border(board, WHITE, 1, 0.85)
 
-	local function strip(team, x: UDim)
-		local bar = make("Frame", {
-			Position = UDim2.new(x.Scale, x.Offset, 0, 10),
-			Size = UDim2.new(0, 6, 1, -20),
-			BackgroundColor3 = team.Color,
-			BorderSizePixel = 0,
-		}, board)
-		corner(bar, 3)
+	local function label(props: { [string]: any }): TextLabel
+		props.Font = SCORE_FONT
+		props.TextStrokeTransparency = 0.15
+		props.TextStrokeColor3 = OUTLINE
+		props.Size = props.Size or UDim2.fromOffset(120, 40)
+		return text(props, board)
 	end
-	strip(HOME, UDim.new(0, 10))
-	strip(AWAY, UDim.new(1, -16))
 
-	text({
-		Position = UDim2.fromOffset(26, 0),
-		Size = UDim2.new(0, 120, 1, 0),
-		Text = HOME.Name,
-		TextColor3 = HOME.Color,
-		TextSize = 19,
-		TextXAlignment = Enum.TextXAlignment.Left,
-	}, board)
-	text({
-		Position = UDim2.new(1, -146, 0, 0),
-		Size = UDim2.new(0, 120, 1, 0),
-		Text = AWAY.Name,
-		TextColor3 = AWAY.Color,
-		TextSize = 19,
+	label({
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(0.5, -84, 0, 0),
+		Size = UDim2.fromOffset(160, 40),
+		Text = HOME.Name .. " :",
+		TextColor3 = HOME.Color:Lerp(WHITE, 0.25),
+		TextSize = 26,
 		TextXAlignment = Enum.TextXAlignment.Right,
-	}, board)
-
-	homeScore = text({
-		Position = UDim2.new(0.5, -110, 0, 0),
-		Size = UDim2.new(0, 50, 1, 0),
-		Font = Enum.Font.GothamBlack,
+	})
+	homeScore = label({
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(0.5, -50, 0, 0),
+		Size = UDim2.fromOffset(30, 40),
 		Text = "0",
-		TextSize = 34,
-	}, board)
-	awayScore = text({
-		Position = UDim2.new(0.5, 60, 0, 0),
-		Size = UDim2.new(0, 50, 1, 0),
-		Font = Enum.Font.GothamBlack,
-		Text = "0",
-		TextSize = 34,
-	}, board)
-	clock = text({
-		Position = UDim2.new(0.5, -45, 0, 0),
-		Size = UDim2.new(0, 90, 1, 0),
+		TextSize = 28,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	})
+	clock = label({
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.fromOffset(90, 40),
 		Text = "5:00",
-		TextColor3 = GOLD,
-		TextSize = 24,
-	}, board)
+		TextSize = 26,
+	})
+	awayScore = label({
+		Position = UDim2.new(0.5, 50, 0, 0),
+		Size = UDim2.fromOffset(30, 40),
+		Text = "0",
+		TextSize = 28,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+	label({
+		Position = UDim2.new(0.5, 84, 0, 0),
+		Size = UDim2.fromOffset(160, 40),
+		Text = ": " .. AWAY.Name,
+		TextColor3 = AWAY.Color:Lerp(WHITE, 0.25),
+		TextSize = 26,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
 
 	phaseLabel = text({
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 76),
+		Position = UDim2.new(0.5, 0, 0, 50),
 		Size = UDim2.fromOffset(420, 20),
-		TextColor3 = MUTED,
-		TextSize = 13,
-		TextStrokeTransparency = 0.6,
+		Font = SCORE_FONT,
+		TextColor3 = WHITE,
+		TextSize = 15,
+		TextStrokeTransparency = 0.3,
+		TextStrokeColor3 = OUTLINE,
 	}, root)
 end
 
@@ -7243,7 +6721,7 @@ local function buildBars()
 	local cluster = make("Frame", {
 		Name = "Bars",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -24),
+		Position = UserInputService.TouchEnabled and UDim2.new(0.5, 0, 1, -24) or UDim2.new(0.5, 0, 1, -112 + BARS_SHIFT),
 		Size = UDim2.fromOffset(340, 66),
 		BackgroundTransparency = 1,
 	}, root)
@@ -7255,10 +6733,11 @@ local function buildBars()
 	local resonanceHolder, resonance = bar(cluster, 48, 12, "РЕЗОНАНС", WHITE)
 	resonanceFill = resonance
 	resonanceGlow = border(resonanceHolder, WHITE, 2, 1)
+	resonanceHolder.Visible = STYLES_ON
 
 	ballLabel = text({
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -104),
+		Position = UserInputService.TouchEnabled and UDim2.new(0.5, 0, 1, -104) or UDim2.new(0.5, 0, 1, -184 + BARS_SHIFT),
 		Size = UDim2.fromOffset(300, 22),
 		Text = "МЯЧ У ТЕБЯ",
 		TextColor3 = GOLD,
@@ -7269,7 +6748,7 @@ local function buildBars()
 
 	hintLabel = text({
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -132),
+		Position = UserInputService.TouchEnabled and UDim2.new(0.5, 0, 1, -132) or UDim2.new(0.5, 0, 1, -212 + BARS_SHIFT),
 		Size = UDim2.fromOffset(420, 24),
 		TextColor3 = RED,
 		TextSize = 17,
@@ -7297,20 +6776,21 @@ end
 
 local slots = {} -- [key] = { frame, stroke, name, overlay, time, total }
 -- "Action" — контекстная клавиша: без мяча подкат, с мячом дриблинг.
-local slotOrder = { "Action", "Dash", "A1", "A2", "A3" }
+local slotOrder = STYLES_ON and { "Action", "Dash", "A1", "A2", "A3" } or { "Action", "Dash" }
 
 local function buildSlots()
 	local touch = UserInputService.TouchEnabled
 	local holder = make("Frame", {
 		Name = "Slots",
-		AnchorPoint = touch and Vector2.new(1, 0) or Vector2.new(1, 1),
-		Position = touch and UDim2.new(1, -18, 0, 86) or UDim2.new(1, -24, 1, -24),
+		-- На ПК — по центру внизу, под полоской сил; на телефоне — справа сверху, чтобы не мешать кнопкам.
+		AnchorPoint = touch and Vector2.new(1, 0) or Vector2.new(0.5, 1),
+		Position = touch and UDim2.new(1, -18, 0, 86) or UDim2.new(0.5, 0, 1, -10),
 		Size = UDim2.fromOffset(#slotOrder * 78, 92),
 		BackgroundTransparency = 1,
 	}, root)
 	make("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
-		HorizontalAlignment = Enum.HorizontalAlignment.Right,
+		HorizontalAlignment = touch and Enum.HorizontalAlignment.Right or Enum.HorizontalAlignment.Center,
 		Padding = UDim.new(0, 10),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 	}, holder)
@@ -7391,7 +6871,7 @@ local function refreshStyle()
 		return
 	end
 	shownStyle = style.id
-	for index = 1, 3 do
+	for index = 1, STYLES_ON and 3 or 0 do
 		local slot = slots["A" .. index]
 		local ability = style.abilities[index]
 		slot.name.Text = ability and Util.upper(ability.name) or "—"
@@ -7479,11 +6959,13 @@ local function buildHelp()
 		{ keyName(c.Pass), "пас партнёру" },
 		{ keyName(c.Lob), "навес" },
 		{ keyName(c.Dash), "рывок" },
-		{ keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "способности стиля" },
-		{ keyName(c.Ability3), "ульта (полный Резонанс)" },
-		{ keyName(c.StyleMenu), "сменить стиль" },
-		{ c.ShiftLock == "LeftControl" and "Ctrl" or c.ShiftLock, "закрепить камеру" },
 	}
+	if STYLES_ON then
+		table.insert(lines, { keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "способности стиля" })
+		table.insert(lines, { keyName(c.Ability3), "ульта (полный Резонанс)" })
+		table.insert(lines, { keyName(c.StyleMenu), "сменить стиль" })
+	end
+	table.insert(lines, { c.ShiftLock == "LeftControl" and "Ctrl" or c.ShiftLock, "закрепить камеру" })
 
 	helpPanel = make("Frame", {
 		Name = "Help",
@@ -7820,8 +7302,10 @@ local function onRender()
 	setText(clock, formatTime(match:GetAttribute("TimeLeft") or 0))
 	setText(phaseLabel, PHASE_TEXT[State.phase()] or "")
 
-	local style = State.style()
-	setText(styleButton, string.format("СТИЛЬ: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
+	if STYLES_ON then
+		local style = State.style()
+		setText(styleButton, string.format("СТИЛЬ: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
+	end
 
 	-- Силы.
 	local maxStamina = State.player:GetAttribute("MaxStamina") or Config.Player.MaxStamina
@@ -7913,7 +7397,9 @@ function Hud.start()
 	buildBars()
 	buildSlots()
 	buildHelp()
-	buildStyleMenu()
+	if STYLES_ON then
+		buildStyleMenu()
+	end
 	hookEvents()
 
 	local function press(fn: () -> ())
@@ -7936,14 +7422,16 @@ function Hud.start()
 		end
 		return list
 	end
-	ContextActionService:BindAction(
-		"RS_StyleMenu",
-		press(function()
-			setMenu(not menu.Visible)
-		end),
-		false,
-		table.unpack(keys(Config.Controls.StyleMenu))
-	)
+	if STYLES_ON then
+		ContextActionService:BindAction(
+			"RS_StyleMenu",
+			press(function()
+				setMenu(not menu.Visible)
+			end),
+			false,
+			table.unpack(keys(Config.Controls.StyleMenu))
+		)
+	end
 	ContextActionService:BindAction(
 		"RS_Help",
 		press(function()
@@ -7962,16 +7450,18 @@ function Hud.start()
 	RunService.RenderStepped:Connect(onRender)
 
 	-- При первом входе сразу предлагаем выбрать стиль.
-	task.delay(1.5, function()
-		setMenu(true)
-	end)
+	if STYLES_ON then
+		task.delay(1.5, function()
+			setMenu(true)
+		end)
+	end
 end
 
 return Hud
 ]]></string>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="36">
+        <Item class="LocalScript" referent="34">
           <Properties>
             <string name="Name">Main</string>
             <string name="Source"><![CDATA[-- Точка входа клиента.
@@ -8003,18 +7493,22 @@ Hud.start()
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="37">
+        <Item class="ModuleScript" referent="35">
           <Properties>
             <string name="Name">ProcAnimator</string>
             <string name="Source"><![CDATA[-- Проигрывает анимации из Shared/Animations на персонажах R6 и R15.
 -- Работает через Motor6D.Transform: каждый кадр (Stepped) мы подмешиваем свою позу
 -- поверх того, что выставил стандартный Animator (бег, стойка).
+--
+-- Если в Config.AnimationIds для анимации указан ID (анимация, опубликованная в Roblox — например,
+-- сделанная в Blender), вместо позы из кода играется она, через обычный Animator.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Animations = require(Shared.Animations)
+local Config = require(Shared.Config)
 local AnimSampler = require(Shared.AnimSampler)
 
 local ProcAnimator = {}
@@ -8074,7 +7568,7 @@ end
 local function getRig(character: Model)
 	local rig = rigs[character]
 	if not rig then
-		rig = { kind = detectKind(character), motors = {}, frames = {}, count = 0, tracks = {}, written = {} }
+		rig = { kind = detectKind(character), motors = {}, frames = {}, count = 0, tracks = {}, written = {}, assets = {} }
 		rigs[character] = rig
 	end
 	if rig.count < #JOINTS[rig.kind] - 3 then
@@ -8082,6 +7576,37 @@ local function getRig(character: Model)
 		rig.motors, rig.frames, rig.count = findMotors(character, rig.kind)
 	end
 	return rig
+end
+
+-- Анимация из Roblox по ID (Config.AnimationIds). Возвращает AnimationTrack или nil, если ID не задан
+-- или анимацию не удалось загрузить — тогда играет встроенная поза.
+local function assetTrack(rig, character: Model, name: string): AnimationTrack?
+	local id = Config.AnimationIds[name]
+	if type(id) ~= "string" or id == "" then
+		return nil
+	end
+	local cached = rig.assets[name]
+	if cached ~= nil then
+		return cached or nil
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	local track = nil
+	if animator then
+		local animation = Instance.new("Animation")
+		animation.AnimationId = id
+		local ok, result = pcall(function()
+			return animator:LoadAnimation(animation)
+		end)
+		if ok and result then
+			track = result
+			track.Priority = Enum.AnimationPriority.Action
+		else
+			warn(string.format("[Анимации] не удалось загрузить %s (%s): %s", name, id, tostring(result)))
+		end
+	end
+	rig.assets[name] = track or false
+	return track
 end
 
 -- options: speed, weight, fadeIn, fadeOut
@@ -8094,12 +7619,20 @@ function ProcAnimator.play(character: Model?, name: string, options: { [string]:
 	if not anim then
 		return nil
 	end
+	local opts = options or {}
+
+	local asset = assetTrack(rig, character, name)
+	if asset then
+		asset.Looped = anim.loop == true
+		asset:Play(opts.fadeIn or anim.fadeIn or 0.08, opts.weight or 1, opts.speed or 1)
+		return asset
+	end
+
 	for i = #rig.tracks, 1, -1 do
 		if rig.tracks[i].name == name then
 			table.remove(rig.tracks, i)
 		end
 	end
-	local opts = options or {}
 	local track = {
 		name = name,
 		anim = anim,
@@ -8133,6 +7666,11 @@ function ProcAnimator.stop(character: Model?, name: string)
 	if not rig then
 		return
 	end
+	local asset = rig.assets[name]
+	if asset then
+		local anim = Animations.get(name, rig.kind)
+		asset:Stop(anim and anim.fadeOut or 0.15)
+	end
 	for _, track in ipairs(rig.tracks) do
 		if track.name == name then
 			track.stopping = true
@@ -8144,6 +7682,10 @@ function ProcAnimator.isPlaying(character: Model?, name: string): boolean
 	local rig = character and rigs[character]
 	if not rig then
 		return false
+	end
+	local asset = rig.assets[name]
+	if asset and asset.IsPlaying then
+		return true
 	end
 	for _, track in ipairs(rig.tracks) do
 		if track.name == name and not track.stopping then
@@ -8241,7 +7783,7 @@ return ProcAnimator
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="38">
+        <Item class="ModuleScript" referent="36">
           <Properties>
             <string name="Name">Sfx</string>
             <string name="Source"><![CDATA[-- Звуки. Список и громкость — в Config.Sounds.
@@ -8298,7 +7840,7 @@ return Sfx
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="39">
+        <Item class="ModuleScript" referent="37">
           <Properties>
             <string name="Name">State</string>
             <string name="Source"><![CDATA[-- Короткие функции «что сейчас с моим игроком и матчем». Используются всеми клиентскими модулями.
@@ -8390,7 +7932,7 @@ return State
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="40">
+  <Item class="Workspace" referent="38">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="NeedsPivotMigration">false</bool>

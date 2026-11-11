@@ -1,12 +1,16 @@
 -- Проигрывает анимации из Shared/Animations на персонажах R6 и R15.
 -- Работает через Motor6D.Transform: каждый кадр (Stepped) мы подмешиваем свою позу
 -- поверх того, что выставил стандартный Animator (бег, стойка).
+--
+-- Если в Config.AnimationIds для анимации указан ID (анимация, опубликованная в Roblox — например,
+-- сделанная в Blender), вместо позы из кода играется она, через обычный Animator.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Animations = require(Shared.Animations)
+local Config = require(Shared.Config)
 local AnimSampler = require(Shared.AnimSampler)
 
 local ProcAnimator = {}
@@ -66,7 +70,7 @@ end
 local function getRig(character: Model)
 	local rig = rigs[character]
 	if not rig then
-		rig = { kind = detectKind(character), motors = {}, frames = {}, count = 0, tracks = {}, written = {} }
+		rig = { kind = detectKind(character), motors = {}, frames = {}, count = 0, tracks = {}, written = {}, assets = {} }
 		rigs[character] = rig
 	end
 	if rig.count < #JOINTS[rig.kind] - 3 then
@@ -74,6 +78,37 @@ local function getRig(character: Model)
 		rig.motors, rig.frames, rig.count = findMotors(character, rig.kind)
 	end
 	return rig
+end
+
+-- Анимация из Roblox по ID (Config.AnimationIds). Возвращает AnimationTrack или nil, если ID не задан
+-- или анимацию не удалось загрузить — тогда играет встроенная поза.
+local function assetTrack(rig, character: Model, name: string): AnimationTrack?
+	local id = Config.AnimationIds[name]
+	if type(id) ~= "string" or id == "" then
+		return nil
+	end
+	local cached = rig.assets[name]
+	if cached ~= nil then
+		return cached or nil
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	local track = nil
+	if animator then
+		local animation = Instance.new("Animation")
+		animation.AnimationId = id
+		local ok, result = pcall(function()
+			return animator:LoadAnimation(animation)
+		end)
+		if ok and result then
+			track = result
+			track.Priority = Enum.AnimationPriority.Action
+		else
+			warn(string.format("[Анимации] не удалось загрузить %s (%s): %s", name, id, tostring(result)))
+		end
+	end
+	rig.assets[name] = track or false
+	return track
 end
 
 -- options: speed, weight, fadeIn, fadeOut
@@ -86,12 +121,20 @@ function ProcAnimator.play(character: Model?, name: string, options: { [string]:
 	if not anim then
 		return nil
 	end
+	local opts = options or {}
+
+	local asset = assetTrack(rig, character, name)
+	if asset then
+		asset.Looped = anim.loop == true
+		asset:Play(opts.fadeIn or anim.fadeIn or 0.08, opts.weight or 1, opts.speed or 1)
+		return asset
+	end
+
 	for i = #rig.tracks, 1, -1 do
 		if rig.tracks[i].name == name then
 			table.remove(rig.tracks, i)
 		end
 	end
-	local opts = options or {}
 	local track = {
 		name = name,
 		anim = anim,
@@ -125,6 +168,11 @@ function ProcAnimator.stop(character: Model?, name: string)
 	if not rig then
 		return
 	end
+	local asset = rig.assets[name]
+	if asset then
+		local anim = Animations.get(name, rig.kind)
+		asset:Stop(anim and anim.fadeOut or 0.15)
+	end
 	for _, track in ipairs(rig.tracks) do
 		if track.name == name then
 			track.stopping = true
@@ -136,6 +184,10 @@ function ProcAnimator.isPlaying(character: Model?, name: string): boolean
 	local rig = character and rigs[character]
 	if not rig then
 		return false
+	end
+	local asset = rig.assets[name]
+	if asset and asset.IsPlaying then
+		return true
 	end
 	for _, track in ipairs(rig.tracks) do
 		if track.name == name and not track.stopping then

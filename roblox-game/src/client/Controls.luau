@@ -12,6 +12,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local FieldSpec = require(Shared.FieldSpec)
 local Mover = require(Shared.Mover)
+local Styles = require(Shared.Styles)
 local Util = require(Shared.Util)
 local ProcAnimator = require(script.Parent.ProcAnimator)
 local State = require(script.Parent.State)
@@ -499,27 +500,18 @@ function Controls.start()
 	)
 	bind("RS_Action", CONTROLS.Action, onPress(doAction))
 	bind("RS_Dash", CONTROLS.Dash, onPress(doDash))
-	bind(
-		"RS_Ability1",
-		CONTROLS.Ability1,
-		onPress(function()
-			doAbility(1)
-		end)
-	)
-	bind(
-		"RS_Ability2",
-		CONTROLS.Ability2,
-		onPress(function()
-			doAbility(2)
-		end)
-	)
-	bind(
-		"RS_Ability3",
-		CONTROLS.Ability3,
-		onPress(function()
-			doAbility(3)
-		end)
-	)
+	-- Способности есть только у стилей; пока стили отключены, клавиши Z/X/C свободны.
+	if Styles.enabled then
+		for slot = 1, 3 do
+			bind(
+				"RS_Ability" .. slot,
+				(CONTROLS :: any)["Ability" .. slot],
+				onPress(function()
+					doAbility(slot)
+				end)
+			)
+		end
+	end
 
 	-- Бег привязан с высоким приоритетом и «поглощает» клавишу: иначе Shift заодно
 	-- переключал бы стандартную блокировку камеры Roblox.

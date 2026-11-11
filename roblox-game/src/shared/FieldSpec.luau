@@ -1,32 +1,33 @@
 -- Размеры поля. Используется и сервером (постройка, голы), и клиентом (прицел, боты).
--- Поле лежит вдоль оси X: ворота СОЛАР на -X, ворота НОКС на +X. Верх газона = Origin.Y.
+-- Поле лежит вдоль оси X: ворота HOME на -X, ворота AWAY на +X. Верх газона = Origin.Y.
 
 local FieldSpec = {}
 
 FieldSpec.Origin = Vector3.new(0, 0, 0)
 
-FieldSpec.Length = 260
-FieldSpec.Width = 150
+FieldSpec.Length = 380
+FieldSpec.Width = 240
 FieldSpec.HalfLength = FieldSpec.Length / 2
 FieldSpec.HalfWidth = FieldSpec.Width / 2
 
 -- Зона за линиями до бортов: мяч не уходит в аут, а отскакивает от борта.
-FieldSpec.EndMargin = 14
-FieldSpec.SideMargin = 9
-FieldSpec.WallHeight = 50
+FieldSpec.EndMargin = 18
+FieldSpec.SideMargin = 12
+FieldSpec.WallHeight = 80
 
-FieldSpec.GoalWidth = 32
-FieldSpec.GoalHeight = 12.5
-FieldSpec.GoalDepth = 9
-FieldSpec.PostRadius = 0.55
+FieldSpec.GoalWidth = 40
+FieldSpec.GoalHeight = 14
+FieldSpec.GoalDepth = 10
+FieldSpec.PostRadius = 0.6
 
-FieldSpec.PenaltyDepth = 46
-FieldSpec.PenaltyWidth = 92
-FieldSpec.GoalAreaDepth = 17
-FieldSpec.GoalAreaWidth = 54
-FieldSpec.PenaltySpot = 32
-FieldSpec.CenterRadius = 26
-FieldSpec.LineWidth = 0.8
+FieldSpec.PenaltyDepth = 66
+FieldSpec.PenaltyWidth = 140
+FieldSpec.GoalAreaDepth = 24
+FieldSpec.GoalAreaWidth = 72
+FieldSpec.PenaltySpot = 44
+FieldSpec.PenaltyArc = 30
+FieldSpec.CenterRadius = 36
+FieldSpec.LineWidth = 1
 
 -- Центр линии ворот на уровне газона. side: -1 или 1.
 function FieldSpec.goalCenter(side: number): Vector3

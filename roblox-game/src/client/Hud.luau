@@ -26,6 +26,10 @@ local GOLD = Color3.fromRGB(255, 224, 120)
 local RED = Color3.fromRGB(255, 92, 92)
 local HOME, AWAY = Config.Teams.Home, Config.Teams.Away
 local RES_MAX = Config.Resonance.Max
+-- Пока в игре нет выбираемых стилей, меню стилей, способности и Резонанс не показываем.
+local STYLES_ON = Styles.enabled
+-- Без шкалы Резонанса полоски внизу на одну строку ниже.
+local BARS_SHIFT = STYLES_ON and 0 or 22
 
 local root: Frame
 local rootScale: UIScale
@@ -112,77 +116,76 @@ end
 
 local homeScore: TextLabel, awayScore: TextLabel, clock: TextLabel, phaseLabel: TextLabel
 
+-- Счёт сверху по центру без плашки: «HOME : 0   4:17   0 : AWAY».
+local SCORE_FONT = Enum.Font.FredokaOne
+local OUTLINE = Color3.fromRGB(10, 14, 32)
+
 local function buildScoreboard()
 	local board = make("Frame", {
 		Name = "Scoreboard",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 14),
-		Size = UDim2.fromOffset(470, 56),
-		BackgroundColor3 = PANEL,
-		BackgroundTransparency = 0.12,
-		BorderSizePixel = 0,
+		Position = UDim2.new(0.5, 0, 0, 10),
+		Size = UDim2.fromOffset(520, 40),
+		BackgroundTransparency = 1,
 	}, root)
-	corner(board, 14)
-	border(board, WHITE, 1, 0.85)
 
-	local function strip(team, x: UDim)
-		local bar = make("Frame", {
-			Position = UDim2.new(x.Scale, x.Offset, 0, 10),
-			Size = UDim2.new(0, 6, 1, -20),
-			BackgroundColor3 = team.Color,
-			BorderSizePixel = 0,
-		}, board)
-		corner(bar, 3)
+	local function label(props: { [string]: any }): TextLabel
+		props.Font = SCORE_FONT
+		props.TextStrokeTransparency = 0.15
+		props.TextStrokeColor3 = OUTLINE
+		props.Size = props.Size or UDim2.fromOffset(120, 40)
+		return text(props, board)
 	end
-	strip(HOME, UDim.new(0, 10))
-	strip(AWAY, UDim.new(1, -16))
 
-	text({
-		Position = UDim2.fromOffset(26, 0),
-		Size = UDim2.new(0, 120, 1, 0),
-		Text = HOME.Name,
-		TextColor3 = HOME.Color,
-		TextSize = 19,
-		TextXAlignment = Enum.TextXAlignment.Left,
-	}, board)
-	text({
-		Position = UDim2.new(1, -146, 0, 0),
-		Size = UDim2.new(0, 120, 1, 0),
-		Text = AWAY.Name,
-		TextColor3 = AWAY.Color,
-		TextSize = 19,
+	label({
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(0.5, -84, 0, 0),
+		Size = UDim2.fromOffset(160, 40),
+		Text = HOME.Name .. " :",
+		TextColor3 = HOME.Color:Lerp(WHITE, 0.25),
+		TextSize = 26,
 		TextXAlignment = Enum.TextXAlignment.Right,
-	}, board)
-
-	homeScore = text({
-		Position = UDim2.new(0.5, -110, 0, 0),
-		Size = UDim2.new(0, 50, 1, 0),
-		Font = Enum.Font.GothamBlack,
+	})
+	homeScore = label({
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(0.5, -50, 0, 0),
+		Size = UDim2.fromOffset(30, 40),
 		Text = "0",
-		TextSize = 34,
-	}, board)
-	awayScore = text({
-		Position = UDim2.new(0.5, 60, 0, 0),
-		Size = UDim2.new(0, 50, 1, 0),
-		Font = Enum.Font.GothamBlack,
-		Text = "0",
-		TextSize = 34,
-	}, board)
-	clock = text({
-		Position = UDim2.new(0.5, -45, 0, 0),
-		Size = UDim2.new(0, 90, 1, 0),
+		TextSize = 28,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	})
+	clock = label({
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.fromOffset(90, 40),
 		Text = "5:00",
-		TextColor3 = GOLD,
-		TextSize = 24,
-	}, board)
+		TextSize = 26,
+	})
+	awayScore = label({
+		Position = UDim2.new(0.5, 50, 0, 0),
+		Size = UDim2.fromOffset(30, 40),
+		Text = "0",
+		TextSize = 28,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+	label({
+		Position = UDim2.new(0.5, 84, 0, 0),
+		Size = UDim2.fromOffset(160, 40),
+		Text = ": " .. AWAY.Name,
+		TextColor3 = AWAY.Color:Lerp(WHITE, 0.25),
+		TextSize = 26,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
 
 	phaseLabel = text({
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 76),
+		Position = UDim2.new(0.5, 0, 0, 50),
 		Size = UDim2.fromOffset(420, 20),
-		TextColor3 = MUTED,
-		TextSize = 13,
-		TextStrokeTransparency = 0.6,
+		Font = SCORE_FONT,
+		TextColor3 = WHITE,
+		TextSize = 15,
+		TextStrokeTransparency = 0.3,
+		TextStrokeColor3 = OUTLINE,
 	}, root)
 end
 
@@ -282,7 +285,7 @@ local function buildBars()
 	local cluster = make("Frame", {
 		Name = "Bars",
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -24),
+		Position = UserInputService.TouchEnabled and UDim2.new(0.5, 0, 1, -24) or UDim2.new(0.5, 0, 1, -112 + BARS_SHIFT),
 		Size = UDim2.fromOffset(340, 66),
 		BackgroundTransparency = 1,
 	}, root)
@@ -294,10 +297,11 @@ local function buildBars()
 	local resonanceHolder, resonance = bar(cluster, 48, 12, "РЕЗОНАНС", WHITE)
 	resonanceFill = resonance
 	resonanceGlow = border(resonanceHolder, WHITE, 2, 1)
+	resonanceHolder.Visible = STYLES_ON
 
 	ballLabel = text({
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -104),
+		Position = UserInputService.TouchEnabled and UDim2.new(0.5, 0, 1, -104) or UDim2.new(0.5, 0, 1, -184 + BARS_SHIFT),
 		Size = UDim2.fromOffset(300, 22),
 		Text = "МЯЧ У ТЕБЯ",
 		TextColor3 = GOLD,
@@ -308,7 +312,7 @@ local function buildBars()
 
 	hintLabel = text({
 		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -132),
+		Position = UserInputService.TouchEnabled and UDim2.new(0.5, 0, 1, -132) or UDim2.new(0.5, 0, 1, -212 + BARS_SHIFT),
 		Size = UDim2.fromOffset(420, 24),
 		TextColor3 = RED,
 		TextSize = 17,
@@ -336,20 +340,21 @@ end
 
 local slots = {} -- [key] = { frame, stroke, name, overlay, time, total }
 -- "Action" — контекстная клавиша: без мяча подкат, с мячом дриблинг.
-local slotOrder = { "Action", "Dash", "A1", "A2", "A3" }
+local slotOrder = STYLES_ON and { "Action", "Dash", "A1", "A2", "A3" } or { "Action", "Dash" }
 
 local function buildSlots()
 	local touch = UserInputService.TouchEnabled
 	local holder = make("Frame", {
 		Name = "Slots",
-		AnchorPoint = touch and Vector2.new(1, 0) or Vector2.new(1, 1),
-		Position = touch and UDim2.new(1, -18, 0, 86) or UDim2.new(1, -24, 1, -24),
+		-- На ПК — по центру внизу, под полоской сил; на телефоне — справа сверху, чтобы не мешать кнопкам.
+		AnchorPoint = touch and Vector2.new(1, 0) or Vector2.new(0.5, 1),
+		Position = touch and UDim2.new(1, -18, 0, 86) or UDim2.new(0.5, 0, 1, -10),
 		Size = UDim2.fromOffset(#slotOrder * 78, 92),
 		BackgroundTransparency = 1,
 	}, root)
 	make("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
-		HorizontalAlignment = Enum.HorizontalAlignment.Right,
+		HorizontalAlignment = touch and Enum.HorizontalAlignment.Right or Enum.HorizontalAlignment.Center,
 		Padding = UDim.new(0, 10),
 		SortOrder = Enum.SortOrder.LayoutOrder,
 	}, holder)
@@ -430,7 +435,7 @@ local function refreshStyle()
 		return
 	end
 	shownStyle = style.id
-	for index = 1, 3 do
+	for index = 1, STYLES_ON and 3 or 0 do
 		local slot = slots["A" .. index]
 		local ability = style.abilities[index]
 		slot.name.Text = ability and Util.upper(ability.name) or "—"
@@ -518,11 +523,13 @@ local function buildHelp()
 		{ keyName(c.Pass), "пас партнёру" },
 		{ keyName(c.Lob), "навес" },
 		{ keyName(c.Dash), "рывок" },
-		{ keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "способности стиля" },
-		{ keyName(c.Ability3), "ульта (полный Резонанс)" },
-		{ keyName(c.StyleMenu), "сменить стиль" },
-		{ c.ShiftLock == "LeftControl" and "Ctrl" or c.ShiftLock, "закрепить камеру" },
 	}
+	if STYLES_ON then
+		table.insert(lines, { keyName(c.Ability1) .. "  " .. keyName(c.Ability2), "способности стиля" })
+		table.insert(lines, { keyName(c.Ability3), "ульта (полный Резонанс)" })
+		table.insert(lines, { keyName(c.StyleMenu), "сменить стиль" })
+	end
+	table.insert(lines, { c.ShiftLock == "LeftControl" and "Ctrl" or c.ShiftLock, "закрепить камеру" })
 
 	helpPanel = make("Frame", {
 		Name = "Help",
@@ -859,8 +866,10 @@ local function onRender()
 	setText(clock, formatTime(match:GetAttribute("TimeLeft") or 0))
 	setText(phaseLabel, PHASE_TEXT[State.phase()] or "")
 
-	local style = State.style()
-	setText(styleButton, string.format("СТИЛЬ: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
+	if STYLES_ON then
+		local style = State.style()
+		setText(styleButton, string.format("СТИЛЬ: %s  [%s]", Util.upper(style.name), keyName(Config.Controls.StyleMenu)))
+	end
 
 	-- Силы.
 	local maxStamina = State.player:GetAttribute("MaxStamina") or Config.Player.MaxStamina
@@ -952,7 +961,9 @@ function Hud.start()
 	buildBars()
 	buildSlots()
 	buildHelp()
-	buildStyleMenu()
+	if STYLES_ON then
+		buildStyleMenu()
+	end
 	hookEvents()
 
 	local function press(fn: () -> ())
@@ -975,14 +986,16 @@ function Hud.start()
 		end
 		return list
 	end
-	ContextActionService:BindAction(
-		"RS_StyleMenu",
-		press(function()
-			setMenu(not menu.Visible)
-		end),
-		false,
-		table.unpack(keys(Config.Controls.StyleMenu))
-	)
+	if STYLES_ON then
+		ContextActionService:BindAction(
+			"RS_StyleMenu",
+			press(function()
+				setMenu(not menu.Visible)
+			end),
+			false,
+			table.unpack(keys(Config.Controls.StyleMenu))
+		)
+	end
 	ContextActionService:BindAction(
 		"RS_Help",
 		press(function()
@@ -1001,9 +1014,11 @@ function Hud.start()
 	RunService.RenderStepped:Connect(onRender)
 
 	-- При первом входе сразу предлагаем выбрать стиль.
-	task.delay(1.5, function()
-		setMenu(true)
-	end)
+	if STYLES_ON then
+		task.delay(1.5, function()
+			setMenu(true)
+		end)
+	end
 end
 
 return Hud

@@ -1,4 +1,5 @@
--- Всё, что делает мяч красивым на клиенте: шлейф, вращение при ведении, вспышки при отскоках, метка над мячом.
+-- Всё, что делает мяч красивым на клиенте: шлейф, вращение при ведении, вспышки при отскоках, метка над мячом
+-- и полупрозрачные круги на газоне вокруг игрока с мячом.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -6,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local FieldSpec = require(Shared.FieldSpec)
 local Fx = require(script.Parent.Fx)
 local State = require(script.Parent.State)
 
@@ -20,6 +22,13 @@ local trail: Trail? = nil
 local glow: PointLight? = nil
 local marker: BillboardGui? = nil
 
+local rings = {} -- круги вокруг игрока с мячом: от внешнего к внутреннему
+local RINGS = {
+	-- радиус, прозрачность, цвет
+	{ 11, 0.82, Color3.fromRGB(200, 236, 200) },
+	{ 7.5, 0.78, Color3.fromRGB(176, 220, 176) },
+	{ 4.2, 0.7, Color3.fromRGB(150, 200, 150) },
+}
 local trailMode: any = nil -- false = обычный шлейф, Color3 = цветной шлейф способности
 local rollAngle = 0
 local dribblePhase = 0
@@ -90,6 +99,41 @@ local function build(part: BasePart)
 	stroke.Parent = diamond
 	gui.Parent = holder
 	marker = gui
+
+	for index, spec in ipairs(RINGS) do
+		local disc = Instance.new("Part")
+		disc.Name = "BallRing"
+		disc.Shape = Enum.PartType.Cylinder
+		disc.Anchored = true
+		disc.CanCollide = false
+		disc.CanTouch = false
+		disc.CanQuery = false
+		disc.CastShadow = false
+		disc.Material = Enum.Material.SmoothPlastic
+		disc.Color = spec[3]
+		disc.Size = Vector3.new(0.05, spec[1] * 2, spec[1] * 2)
+		disc.Transparency = 1
+		disc:SetAttribute("Alpha", spec[2])
+		disc:SetAttribute("Lift", 0.05 + index * 0.02) -- чуть разная высота, чтобы круги не мерцали
+		disc.Parent = Workspace
+		rings[index] = disc
+	end
+end
+
+-- Круги лежат на газоне под тем, у кого мяч; без владельца — скрыты.
+local function updateRings(part: BasePart)
+	local joint = part:FindFirstChild("BallJoint")
+	local carrier = joint and joint:IsA("Motor6D") and joint.Part0 or nil
+	local groundY = FieldSpec.Origin.Y
+	for _, disc in ipairs(rings) do
+		if carrier then
+			local p = carrier.Position
+			disc.CFrame = CFrame.new(p.X, groundY + disc:GetAttribute("Lift"), p.Z) * CFrame.Angles(0, 0, math.rad(90))
+			disc.Transparency = disc:GetAttribute("Alpha")
+		elseif disc.Transparency < 1 then
+			disc.Transparency = 1
+		end
+	end
 end
 
 local function updateTrail(part: BasePart, held: boolean, speed: number)
@@ -133,6 +177,7 @@ local function onRender()
 	holder.CFrame = CFrame.new(position)
 
 	local held = part:GetAttribute("Held") == true
+	updateRings(part)
 	local velocity = part.AssemblyLinearVelocity
 	local speed = velocity.Magnitude
 	updateTrail(part, held, speed)

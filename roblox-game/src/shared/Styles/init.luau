@@ -24,7 +24,10 @@ table.sort(Styles.list, function(a, b)
 	return (a.order or 99) < (b.order or 99)
 end)
 
-Styles.default = Styles.list[1].id
+-- Если выбираемых стилей нет, все играют базовым стилем без способностей,
+-- а меню стилей, способности и Резонанс в интерфейсе скрыты.
+Styles.enabled = #Styles.list > 0
+Styles.default = Styles.enabled and Styles.list[1].id or "Base"
 
 function Styles.get(id: string?)
 	return Styles.byId[id or Styles.default] or Styles.byId[Styles.default]

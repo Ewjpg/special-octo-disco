@@ -27,6 +27,7 @@ Emu.renderSteps = {}
 Emu.characters = {} -- [Model] = controller
 Emu.remoteLog = {} -- счётчики отправленных событий
 Emu.loadCharacterCalls = 0
+Emu.FIELD = {}
 
 ---------------------------------------------------------------------------
 -- Ошибки
@@ -895,6 +896,12 @@ function Emu.load(placePath: string)
 
 	game:GetService("UserInputService").TouchEnabled = false
 	Emu.server = makeSide("server")
+
+	-- Размеры поля для физики эмулятора берём из самой игры.
+	local spec = Emu.server.require(game:GetService("ReplicatedStorage").Shared.FieldSpec)
+	for _, key in ipairs({ "HalfLength", "HalfWidth", "EndMargin", "SideMargin", "GoalWidth", "GoalHeight", "GoalDepth", "WallHeight" }) do
+		Emu.FIELD[key] = spec[key]
+	end
 	return game
 end
 
@@ -989,17 +996,8 @@ end
 -- Физика
 ---------------------------------------------------------------------------
 
-local FIELD = {
-	HalfLength = 130,
-	HalfWidth = 75,
-	EndMargin = 14,
-	SideMargin = 9,
-	GoalWidth = 32,
-	GoalHeight = 12.5,
-	GoalDepth = 9,
-	WallHeight = 50,
-}
-Emu.FIELD = FIELD
+-- Заполняется из Shared/FieldSpec в Emu.load.
+local FIELD = Emu.FIELD
 
 local function flat(v)
 	return Vector3.new(v.X, 0, v.Z)

@@ -38,6 +38,6 @@ python3 tools/build_web.py book/model.json book/stirner-edinstvennyi.html  # в�
 
 ## В этом же репозитории: игра для Roblox
 
-В папке [`roblox-game/`](roblox-game/) лежит отдельный проект — аниме-футбол со стилями **RESONANCE**.
+В папке [`roblox-game/`](roblox-game/) лежит отдельный проект — аниме-футбол для Roblox (команды HOME и AWAY).
 Готовый файл для Roblox Studio: [`roblox-game/build/Resonance.rbxlx`](roblox-game/build/Resonance.rbxlx),
 инструкция — в [`roblox-game/README.md`](roblox-game/README.md).

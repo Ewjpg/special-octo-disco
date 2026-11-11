@@ -107,7 +107,9 @@ end
 save("gui-menu")
 
 -- Игра: мяч у игрока, спринт, замах.
-Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
+if Emu.bound.RS_StyleMenu then
+	Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
+end
 Emu.runUntil(12, function()
 	return matchState:GetAttribute("Phase") == "Playing"
 end)
@@ -120,7 +122,7 @@ Emu.controller(alice.Character).moveTarget = Vector3.new(60, 0, 20)
 Emu.run(3)
 Emu.input("RS_Dash", Enum.UserInputState.Begin)
 Emu.run(0.4)
-workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(40, 9, 20), Vector3.new(130, 4, 5))
+workspace.CurrentCamera.CFrame = CFrame.lookAt(Vector3.new(40, 9, 20), Vector3.new(Emu.FIELD.HalfLength, 4, 5))
 Emu.input("RS_Shoot", Enum.UserInputState.Begin, Enum.UserInputType.MouseButton1)
 Emu.run(0.55)
 save("gui-play")
@@ -133,7 +135,7 @@ for _, other in pairs(Actors.byCharacter) do
 		other.frozen = true
 	end
 end
-alice.Character:PivotTo(CFrame.new(-actor.side * 120, 3, 6))
+alice.Character:PivotTo(CFrame.new(-actor.side * (Emu.FIELD.HalfLength - 10), 3, 6))
 actor.noPickupUntil = 0
 Ball.attach(actor)
 Emu.run(0.1)

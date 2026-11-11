@@ -84,7 +84,8 @@ local function addKit(actor, displayName: string)
 
 	local function refreshStyle()
 		local style = Styles.get(character:GetAttribute("Style"))
-		styleLabel.Text = Util.upper(style.name)
+		-- Служебные стили (базовый, вратарь) в табличке не пишем.
+		styleLabel.Text = style.selectable == false and "" or Util.upper(style.name)
 		styleLabel.TextColor3 = style.color
 	end
 	refreshStyle()

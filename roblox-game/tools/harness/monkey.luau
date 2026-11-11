@@ -49,10 +49,27 @@ Emu.startClient(alice)
 -- Части игроков Roblox «выдаёт» R15: сервер должен пересобирать их в R6.
 local others = { Emu.addPlayer("Bob", 202, "R15"), Emu.addPlayer("Carol", 303) }
 Emu.run(2)
-Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
+if Emu.bound.RS_StyleMenu then
+	Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
+end
 
-local CLIENT_ACTIONS =
-	{ "RS_Pass", "RS_Lob", "RS_Action", "RS_Dash", "RS_Ability1", "RS_Ability2", "RS_Ability3", "RS_StyleMenu", "RS_Help" }
+-- Жмём только те клавиши, что игра действительно привязала (без стилей Z/X/C и M не привязаны).
+local CLIENT_ACTIONS = {}
+for _, name in ipairs({
+	"RS_Pass",
+	"RS_Lob",
+	"RS_Action",
+	"RS_Dash",
+	"RS_Ability1",
+	"RS_Ability2",
+	"RS_Ability3",
+	"RS_StyleMenu",
+	"RS_Help",
+}) do
+	if Emu.bound[name] then
+		table.insert(CLIENT_ACTIONS, name)
+	end
+end
 local SERVER_ACTIONS = { "Shoot", "Pass", "Lob", "Tackle", "Dribble", "Dash", "Ability", "Charge", "Sprint", "SelectStyle" }
 local styleIds = {}
 for _, style in ipairs(Styles.list) do
@@ -117,7 +134,8 @@ Emu.run(duration, function()
 			if rand() < 0.6 then
 				controller.moveTarget = ballPosition
 			elseif rand() < 0.5 then
-				controller.moveTarget = Vector3.new((rand() * 2 - 1) * 140, 0, (rand() * 2 - 1) * 80)
+				controller.moveTarget =
+					Vector3.new((rand() * 2 - 1) * (Emu.FIELD.HalfLength + 10), 0, (rand() * 2 - 1) * (Emu.FIELD.HalfWidth + 6))
 			end
 		end
 	end

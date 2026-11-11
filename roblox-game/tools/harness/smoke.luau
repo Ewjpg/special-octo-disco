@@ -32,7 +32,13 @@ end
 -- Запуск
 ---------------------------------------------------------------------------
 
-local game = Emu.load("build/Resonance.rbxlx")
+local placePath = "build/Resonance.rbxlx"
+for i, arg in ipairs(process.args) do
+	if arg == "--place" then
+		placePath = process.args[i + 1]
+	end
+end
+local game = Emu.load(placePath)
 local workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Server = game:GetService("ServerScriptService").Server
@@ -64,6 +70,20 @@ if stadium then
 end
 check("деталей стадиона > 800", partCount > 800, partCount)
 check("мяч создан", workspace:FindFirstChild("Ball") ~= nil)
+check(
+	"на стадионе нет старых названий",
+	(function()
+		for _, d in ipairs(workspace:GetDescendants()) do
+			if
+				d:IsA("TextLabel")
+				and (string.find(d.Text, "RESONANCE") or string.find(d.Text, "СОЛАР") or string.find(d.Text, "НОКС"))
+			then
+				return false
+			end
+		end
+		return true
+	end)()
+)
 check("RemoteEvents созданы", ReplicatedStorage:FindFirstChild("Remotes") ~= nil)
 local matchState = ReplicatedStorage:FindFirstChild("MatchState")
 check("MatchState создан", matchState ~= nil)
@@ -72,7 +92,10 @@ check(
 	matchState and matchState:GetAttribute("Phase") == "Waiting",
 	matchState and matchState:GetAttribute("Phase")
 )
-check("стилей в меню: 4", #Styles.list == 4, #Styles.list)
+check("базовый стиль есть", Styles.byId[Styles.default] ~= nil, Styles.default)
+print(
+	string.format("       стилей в меню: %d (%s)", #Styles.list, Styles.enabled and "включены" or "отключены")
+)
 
 Emu.adoptCharacters()
 local function keeperCount(): number
@@ -155,15 +178,28 @@ local ClientState = Emu.client.require(Client.State)
 local ClientControls = Emu.client.require(Client.Controls)
 
 check("игрок в команде", alice.Team ~= nil, alice.Team and alice.Team.Name)
-check("стиль по умолчанию — Comet", alice:GetAttribute("Style") == "Comet", alice:GetAttribute("Style"))
+check("стиль по умолчанию", alice:GetAttribute("Style") == Styles.default, alice:GetAttribute("Style"))
 check("персонаж зарегистрирован как актёр", Actors.ofPlayer(alice) ~= nil)
 check("метка команды на персонаже", alice.Character:FindFirstChild("TeamRing") ~= nil)
 local hud = alice.PlayerGui:FindFirstChild("ResonanceHud")
 check("HUD создан", hud ~= nil)
-check(
-	"клавиши привязаны",
-	Emu.bound.RS_Shoot ~= nil and Emu.bound.RS_Action ~= nil and Emu.bound.RS_Ability3 ~= nil and Emu.bound.RS_StyleMenu ~= nil
-)
+check("клавиши привязаны", Emu.bound.RS_Shoot ~= nil and Emu.bound.RS_Action ~= nil and Emu.bound.RS_Pass ~= nil)
+if Styles.enabled then
+	check(
+		"клавиши способностей и меню стилей",
+		Emu.bound.RS_Ability3 ~= nil and Emu.bound.RS_StyleMenu ~= nil
+	)
+else
+	check("без стилей Z/X/C и M свободны", Emu.bound.RS_Ability1 == nil and Emu.bound.RS_StyleMenu == nil)
+	local slotCount = 0
+	for _, child in ipairs(hud.Root.Slots:GetChildren()) do
+		if child:IsA("Frame") then
+			slotCount += 1
+		end
+	end
+	check("без стилей в HUD только E и Q", slotCount == 2, slotCount)
+	check("без стилей меню стилей не создано", hud.Root:FindFirstChild("StyleMenu") == nil)
+end
 check("персонаж игрока — R6", alice.Character.Humanoid.RigType == Enum.HumanoidRigType.R6)
 do
 	local r6Keepers = 0
@@ -176,11 +212,16 @@ do
 end
 
 Emu.run(2)
-check("меню стилей открылось при входе", ClientControls.menuOpen == true)
--- Закрываем меню кнопкой M.
-Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
-Emu.run(0.1)
-check("меню стилей закрывается", ClientControls.menuOpen == false)
+if Styles.enabled then
+	check("меню стилей открылось при входе", ClientControls.menuOpen == true)
+	-- Закрываем меню кнопкой M.
+	Emu.input("RS_StyleMenu", Enum.UserInputState.Begin)
+	Emu.run(0.1)
+	check("меню стилей закрывается", ClientControls.menuOpen == false)
+else
+	check("без стилей меню не открывается", ClientControls.menuOpen == false)
+end
+check("команды называются HOME и AWAY", Config.Teams.Home.Name == "HOME" and Config.Teams.Away.Name == "AWAY")
 
 ---------------------------------------------------------------------------
 section("Розыгрыш и владение мячом")
@@ -199,6 +240,19 @@ end)
 check("игрок подобрал мяч", got)
 check("мяч приварен к игроку", ballPart():FindFirstChild("BallJoint") ~= nil)
 check("клиент видит мяч у себя", ClientState.hasBall() == true)
+Emu.run(0.1)
+do
+	local shown, near = 0, true
+	local rootPos = rootOf(alice).CFrame.Position
+	for _, child in ipairs(workspace:GetChildren()) do
+		if child.Name == "BallRing" and child.Transparency < 1 then
+			shown += 1
+			local p = child.CFrame.Position
+			near = near and math.abs(p.X - rootPos.X) < 1 and math.abs(p.Z - rootPos.Z) < 1 and p.Y < 0.5
+		end
+	end
+	check("круги на газоне под игроком с мячом", shown == 3 and near, shown)
+end
 
 -- Ведение со спринтом в сторону чужих ворот (Home атакует +X).
 local actorAlice = Actors.ofPlayer(alice)
@@ -795,7 +849,11 @@ if keeper then
 	end)
 	check("вратарь выбивает мяч", released)
 	local kx = math.abs(keeper.root.CFrame.Position.X)
-	check("вратарь остаётся у своих ворот", kx > 100 and kx < 136, string.format("x=%.1f", kx))
+	check(
+		"вратарь остаётся у своих ворот",
+		kx > F.HalfLength - 30 and kx < F.HalfLength + 6,
+		string.format("x=%.1f", kx)
+	)
 end
 Emu.run(3)
 

@@ -3,12 +3,10 @@
 
 local Config = {}
 
-Config.GameTitle = "RESONANCE"
-
 -- Side: -1 = ворота на стороне -X, 1 = ворота на стороне +X.
 Config.Teams = {
-	Home = { Name = "СОЛАР", Color = Color3.fromRGB(255, 124, 48), Side = -1 },
-	Away = { Name = "НОКС", Color = Color3.fromRGB(88, 122, 255), Side = 1 },
+	Home = { Name = "HOME", Color = Color3.fromRGB(52, 120, 255), Side = -1 },
+	Away = { Name = "AWAY", Color = Color3.fromRGB(240, 62, 72), Side = 1 },
 }
 
 -- Тип аватара. Анимации есть для обоих, основной — R6.
@@ -25,8 +23,8 @@ Config.Match = {
 }
 
 Config.Player = {
-	WalkSpeed = 20,
-	SprintSpeed = 29,
+	WalkSpeed = 22,
+	SprintSpeed = 32,
 	DribbleMult = 0.94, -- скорость с мячом
 	MaxStamina = 100,
 	SprintDrain = 13, -- расход выносливости в секунду
@@ -51,8 +49,8 @@ Config.Ball = {
 }
 
 Config.Shot = {
-	MinPower = 64,
-	MaxPower = 140,
+	MinPower = 70,
+	MaxPower = 155,
 	ChargeTime = 0.85,
 	ChargeMoveMult = 0.55,
 	BaseElevation = 15, -- градусы, добавляются к наклону камеры
@@ -62,9 +60,9 @@ Config.Shot = {
 
 Config.Pass = {
 	MinSpeed = 62,
-	MaxSpeed = 120,
+	MaxSpeed = 140,
 	AssistAngle = 32, -- конус автонаведения на партнёра
-	MaxRange = 160,
+	MaxRange = 230,
 	Elevation = 3,
 }
 
@@ -72,7 +70,7 @@ Config.Lob = {
 	Elevation = 40,
 	DefaultSpeed = 84,
 	MinSpeed = 48,
-	MaxSpeed = 122,
+	MaxSpeed = 140,
 }
 
 Config.Tackle = {
@@ -117,11 +115,19 @@ Config.Bots = {
 	KeeperSpeed = 23,
 	KeeperReach = 4.8, -- радиус, в котором вратарь ловит мяч
 	KeeperDiveReach = 6.4,
-	KeeperCatchSpeed = 160, -- быстрее — только отбивает
+	KeeperCatchSpeed = 128, -- быстрее — только отбивает (сильный заряженный удар вратарь не ловит)
 	KeeperDiveSpeed = 40,
 	KeeperDiveCooldown = 1.5,
 	KeeperReaction = 0.2,
 	KeeperHoldTime = 1.1,
+}
+
+-- Анимации из Roblox (например, сделанные в Blender или Moon Animator и опубликованные в Roblox).
+-- Впиши ID — и игра будет проигрывать её вместо встроенной анимации из кода. Пусто — встроенная.
+-- Имена: ChargeHold, Shoot, PowerShot, Pass, Lob, Slide, Dribble, Dash, Ram, Stun, Cast,
+--        PowerStance, Celebrate, DiveLeft, DiveRight.
+Config.AnimationIds = {
+	-- Shoot = "rbxassetid://1234567890",
 }
 
 -- Клавиши. Имена — из Enum.KeyCode / Enum.UserInputType.

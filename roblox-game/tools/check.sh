@@ -18,6 +18,15 @@ echo "== дымовой тест в эмуляторе"
 lune run tools/harness/smoke.luau | grep -E "^ FAIL|^== Ошибки|^   ×|ИТОГ" || true
 lune run tools/harness/smoke.luau >/dev/null
 
+echo "== то же со стилями из archive/styles (проверка, что их код не сломан)"
+work="$(mktemp -d)"
+cp -r src default.project.json "$work/"
+cp archive/styles/*.luau "$work/src/shared/Styles/"
+(cd "$work" && rojo build default.project.json -o with-styles.rbxlx >/dev/null)
+lune run tools/harness/smoke.luau --place "$work/with-styles.rbxlx" | grep -E "^ FAIL|^== Ошибки|^   ×|ИТОГ" || true
+lune run tools/harness/smoke.luau --place "$work/with-styles.rbxlx" >/dev/null
+rm -rf "$work"
+
 echo "== стресс-тест: случайные действия трёх игроков"
 for seed in 1 2 3; do
 	lune run tools/harness/monkey.luau "$seed" 120

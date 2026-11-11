@@ -77,6 +77,8 @@ def collect_faces(parts, cam, min_alpha=0.05):
         corners = box_corners(part)
         cam_corners = [mat_vec(cam, c) for c in corners]
         color = part.get("c", (0.8, 0.8, 0.8))
+        # Разметка лежит на газоне почти вплотную: рисуем её чуть «ближе», чтобы газон её не перекрывал.
+        bias = 3.0 if part.get("n") in ("Line", "Spot", "BallRing") else 0.0
         emissive = part.get("m") in ("Neon", "ForceField")
         for normal, idx in BOX_FACES:
             n_world = mat_vec(part["r"], normal)
@@ -84,8 +86,23 @@ def collect_faces(parts, cam, min_alpha=0.05):
             if n_cam[2] <= 0.02:
                 continue  # грань смотрит от камеры
             pts = [cam_corners[i] for i in idx]
-            depth = sum(p[2] for p in pts) / 4
-            faces.append((depth, [(p[0], p[1]) for p in pts], shade(color, n_world, emissive), alpha))
+            fill = shade(color, n_world, emissive)
+            # Длинные грани режем на куски: иначе сортировка «от дальних к ближним» по средней глубине
+            # рисует огромную грань поверх мелких деталей рядом с ней.
+            a, b, c, d = pts
+            nu = max(1, min(40, math.ceil(math.dist(a, b) / 24)))
+            nv = max(1, min(40, math.ceil(math.dist(a, d) / 24)))
+
+            def lerp_point(u, v):
+                top = [a[k] + (b[k] - a[k]) * u for k in range(3)]
+                bottom = [d[k] + (c[k] - d[k]) * u for k in range(3)]
+                return [top[k] + (bottom[k] - top[k]) * v for k in range(3)]
+
+            for i in range(nu):
+                for j in range(nv):
+                    quad = [lerp_point(i / nu, j / nv), lerp_point((i + 1) / nu, j / nv), lerp_point((i + 1) / nu, (j + 1) / nv), lerp_point(i / nu, (j + 1) / nv)]
+                    depth = sum(q[2] for q in quad) / 4 + bias
+                    faces.append((depth, [(q[0], q[1]) for q in quad], fill, alpha))
     faces.sort(key=lambda f: f[0])
     return faces
 
@@ -112,7 +129,10 @@ def font(size):
     return ImageFont.load_default()
 
 
-def render_stadium(parts, out_path, yaw, pitch, width, title, crop=None):
+SKY = (150, 198, 242)
+
+
+def render_stadium(parts, out_path, yaw, pitch, width, title, crop=None, background=SKY):
     cam = camera_matrix(yaw, pitch)
     if crop:
         parts = [p for p in parts if crop(p)]
@@ -123,10 +143,10 @@ def render_stadium(parts, out_path, yaw, pitch, width, title, crop=None):
     margin = 40
     scale = (width - margin * 2) / (max_x - min_x)
     height = int((max_y - min_y) * scale + margin * 2 + 40)
-    image = Image.new("RGB", (width, height), (16, 18, 28))
+    image = Image.new("RGB", (width, height), background)
     origin = (margin - min_x * scale, margin + 40 + max_y * scale)
     draw_faces(image, faces, scale, origin)
-    ImageDraw.Draw(image).text((margin, 14), title, fill=(235, 238, 248), font=font(22))
+    ImageDraw.Draw(image).text((margin, 14), title, fill=(20, 28, 48), font=font(22))
     image.save(out_path)
     print("saved", out_path, image.size, "faces:", len(faces))
 
@@ -183,21 +203,35 @@ def main():
     anims_r6 = json.load(open(src + "/anims-R6.json", encoding="utf-8"))
     anims_r15 = json.load(open(src + "/anims-R15.json", encoding="utf-8"))
 
-    def no_ground(p):
-        return p["n"] != "Ground"
+    # Размеры поля берём из самой разметки: самая дальняя линия = половина длины/ширины.
+    lines = [p for p in stadium if p["n"] == "Line"]
+    half_length = max(abs(p["p"][0]) for p in lines)
+    half_width = max(abs(p["p"][2]) for p in lines)
 
-    render_stadium(stadium, dst + "/stadium-top.png", 0, 90, 1500, "Стадион: вид сверху (ворота СОЛАР слева, НОКС справа)", crop=no_ground)
-    def no_slabs(p):
-        # огромная плита земли и козырьки закрывают обзор в простой проекции — на общем виде их не рисуем
-        return p["n"] not in ("Ground", "Roof", "RoofLed")
+    def is_roof(p):
+        return p["n"].startswith("Roof")
 
-    render_stadium(stadium, dst + "/stadium-view.png", 32, 34, 1500, "Стадион: общий вид (без козырьков трибун)", crop=no_slabs)
+    def no_ground_no_roof(p):
+        return p["n"] != "Ground" and not is_roof(p)
+
+    def cutaway(p):
+        # Для общего вида убираем ещё и задние стены — так чашу видно целиком.
+        return no_ground_no_roof(p) and p["n"] != "BackWall"
+
+    render_stadium(stadium, dst + "/stadium-top.png", 0, 90, 1500, "Стадион сверху (без крыши): ворота HOME слева, AWAY справа", crop=no_ground_no_roof)
+    render_stadium(stadium, dst + "/stadium-view.png", 32, 34, 1500, "Стадион: общий вид (без крыши и задних стен, чтобы было видно чашу)", crop=cutaway)
+
+    def broadcast(p):
+        # Вид «как в трансляции»: ближняя к камере трибуна убрана, дальняя — с крышей.
+        return p["n"] != "Ground" and p["p"][2] <= half_width + 16
+
+    render_stadium(stadium, dst + "/stadium-broadcast.png", 0, 14, 1600, "Вид с боковой линии (ближняя трибуна убрана)", crop=broadcast)
 
     def near_goal(p):
         x, y, z = p["p"]
-        return x > 60 and abs(z) < 70 and y < 30 and x < 150 and max(p["s"]) < 200
+        return half_length - 80 < x < half_length + 25 and abs(z) < 90 and y < 40 and max(p["s"]) < 260
 
-    render_stadium(stadium, dst + "/stadium-goal.png", 122, 16, 1400, "Ворота и штрафная (вид с поля)", crop=near_goal)
+    render_stadium(stadium, dst + "/stadium-goal.png", 122, 16, 1400, "Ворота AWAY и штрафная", crop=near_goal)
     render_animations(anims_r6, dst + "/animations.png", "R6")
     render_animations(anims_r15, dst + "/animations-r15.png", "R15")
 
